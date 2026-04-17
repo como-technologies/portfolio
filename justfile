@@ -1,0 +1,30 @@
+# Default: list available recipes
+default:
+    @just --list
+
+# Install project dependencies and tools
+init:
+    cargo install mdbook mdbook-mermaid mdbook-gruvbox
+
+# Run all CI checks (used by .github/workflows/ci.yml)
+ci: book
+
+# Build the book
+book:
+    mdbook build
+
+# Serve the book locally with live reload
+book-serve:
+    mdbook serve --open
+
+# Run mdbook tests (validates code blocks)
+book-test:
+    mdbook test
+
+# Clean built book artifacts
+book-clean:
+    rm -rf target/book
+
+# Clean all build artifacts
+clean:
+    rm -rf target
