@@ -134,6 +134,14 @@
  * For elements that don't respect CSS variables
  *---------------------------------------------------------------------------*/
 
+/* Inline code */
+.gruvbox :not(pre) > code {
+    color: var(--inline-code-color);
+    background-color: var(--gruvbox-bg1);
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
 /* Link hover */
 .gruvbox .content a:hover {
     color: var(--gruvbox-yellow);
@@ -156,4 +164,73 @@
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--gruvbox-bg3);
+}
+
+/*---------------------------------------------------------------------------
+ * Mermaid diagrams
+ * Mermaid injects a per-diagram inline <style> block with hardcoded
+ * light-mode colors (purple #9370DB borders, #ECECFF fills, #333 text).
+ * Those selectors are ID-scoped (high specificity), so override with
+ * !important to apply the Gruvbox palette.
+ *---------------------------------------------------------------------------*/
+
+/* Node shapes (boxes, circles, etc.) */
+.gruvbox pre.mermaid .node rect,
+.gruvbox pre.mermaid .node circle,
+.gruvbox pre.mermaid .node ellipse,
+.gruvbox pre.mermaid .node polygon,
+.gruvbox pre.mermaid .node path {
+    fill: var(--gruvbox-bg1) !important;
+    stroke: var(--gruvbox-purple) !important;
+}
+
+/* Node / label text */
+.gruvbox pre.mermaid .nodeLabel,
+.gruvbox pre.mermaid .nodeLabel p,
+.gruvbox pre.mermaid .node .label,
+.gruvbox pre.mermaid .label,
+.gruvbox pre.mermaid .label p,
+.gruvbox pre.mermaid .label text,
+.gruvbox pre.mermaid span {
+    color: var(--gruvbox-fg1) !important;
+    fill: var(--gruvbox-fg1) !important;
+}
+
+/* Edges / connectors */
+.gruvbox pre.mermaid .edgePath .path,
+.gruvbox pre.mermaid .flowchart-link {
+    stroke: var(--gruvbox-fg4) !important;
+}
+
+/* Arrowheads and markers */
+.gruvbox pre.mermaid .marker,
+.gruvbox pre.mermaid .arrowMarkerPath,
+.gruvbox pre.mermaid .arrowheadPath {
+    fill: var(--gruvbox-fg4) !important;
+    stroke: var(--gruvbox-fg4) !important;
+}
+
+/* Edge labels (e.g. "re-assess") */
+.gruvbox pre.mermaid .edgeLabel,
+.gruvbox pre.mermaid .edgeLabel p,
+.gruvbox pre.mermaid .edgeLabel span {
+    color: var(--gruvbox-fg1) !important;
+    background-color: var(--gruvbox-bg1) !important;
+}
+.gruvbox pre.mermaid .edgeLabel rect,
+.gruvbox pre.mermaid .labelBkg {
+    fill: var(--gruvbox-bg1) !important;
+    background-color: var(--gruvbox-bg1) !important;
+    opacity: 1 !important;
+}
+
+/* Subgraph clusters */
+.gruvbox pre.mermaid .cluster rect {
+    fill: var(--gruvbox-bg0-soft) !important;
+    stroke: var(--gruvbox-gray) !important;
+}
+.gruvbox pre.mermaid .cluster text,
+.gruvbox pre.mermaid .cluster span {
+    fill: var(--gruvbox-fg1) !important;
+    color: var(--gruvbox-fg1) !important;
 }

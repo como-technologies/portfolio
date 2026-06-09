@@ -5,7 +5,7 @@ A Como engagement is a four-stage loop. Each stage produces an artifact that the
 ```mermaid
 flowchart LR
     A["<b>Assess</b><br/>assessments"] --> P["<b>Prescribe</b><br/>palette-playbook<br/>+ adroit"]
-    P --> D["<b>Adopt</b><br/>services"]
+    P --> D["<b>Adopt</b><br/>conduit<br/>+ services"]
     D --> M["<b>Measure</b><br/>pulse + tuesday"]
     M -.re-assess.-> A
 ```
@@ -24,9 +24,9 @@ flowchart LR
 
 ## 3. Adopt
 
-**What happens.** Como's [services](./services/README.md) wrap the tools. This is where the playbook meets your teams, your code, and your platforms — pairing sessions, enablement, incremental rollout, and the occasional hard conversation with a stakeholder who'd rather keep the status quo.
+**What happens.** This is where the playbook meets your teams, your code, and your platforms. [conduit](./tools/README.md) *(in development)* is the Adopt-stage engine: it reads an accepted ADR and its implementation plan — over adroit's manifest / `-o json` / MCP seam, not by scraping prose — and drives an agent to turn each decision into issues and reviewable pull requests inside the team's *own* forge, model, and cloud, with humans keeping the gates (review, merge, deploy). Como's [services](./services/README.md) wrap it: pairing sessions, enablement, incremental rollout, and the occasional hard conversation with a stakeholder who'd rather keep the status quo.
 
-**What you get.** Measurable adoption, not a shelf-ware playbook. The services layer is what makes the TAPS portfolio an engagement rather than a menu.
+**What you get.** Measurable adoption, not a shelf-ware playbook. conduit tags each PR with the ADR it implements, so the effort [tuesday](./apps/README.md) measures traces back to the decision that prompted it — the thread carried stage to stage (Prescribe → Adopt → Measure), not a direct hand-off from adroit to tuesday. That closes the loop's weakest seam instead of leaving Adopt to human services alone.
 
 ## 4. Measure
 

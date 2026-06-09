@@ -16,7 +16,7 @@ A Como engagement runs a closed four-stage loop, and the portfolio has purpose-b
 
 1. **Assess** — Discover current state with [assessments](./apps/README.md), our AI-assisted authoring tool that turns interviews and artifacts into structured, exportable maturity assessments.
 2. **Prescribe** — Produce an opinionated playbook of decisions and guides. [palette-playbook](./products/README.md) is a concrete example of the format; [adroit](./tools/README.md) is the tool teams use to author the ADRs that fill a playbook.
-3. **Adopt** — Como's [services](./services/README.md) wrap the tools. This is where the playbook meets your teams, your code, and your platforms.
+3. **Adopt** — Turn decisions into shipped code. [conduit](./tools/README.md) *(in development)* is the Adopt-stage engine — a forge-neutral agentic harness that reads adroit's ADRs and plans and drives an agent to work them as issues and pull requests inside your *own* forge, model, and cloud; Como's [services](./services/README.md) wrap it. This is where the playbook meets your teams, your code, and your platforms.
 4. **Measure** — Close the loop with honest signal. [pulse](./apps/README.md) captures verified-anonymous sentiment so you hear what people won't say in a town hall; [tuesday](./apps/README.md) quantifies where engineering capacity is actually going.
 
 Then back to Assess. Modernization is a cycle, not a project.
