@@ -78,7 +78,7 @@ PINS = {
     "conduit": "b92ce8b84ec80acbf951d97d0a45c1bef5748834",  # no remote yet
     "adroit": "df4245b423b0d86a53ab48ae8798138b46761b7a",
     "tuesday": "452fd1ecf539b5c7c600d5bdccdc9dfdc941c246",
-    "assessments": "9fb26e36f6a3524ff33e73c04ddefcab4922b4cc",
+    "assessments": "3515ca34575c1fc20391c8543f0f21258e4b376d",
     "pulse": "e3a679491cab63f2cf6588c320aa111f6d8ca2e1",
     "playbook": "30ab2da6410e5e6d3d8eeb3b709c23654a23a4d2",  # no remote yet
 }
