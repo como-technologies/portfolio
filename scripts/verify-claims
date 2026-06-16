@@ -75,11 +75,11 @@ CACHE = BOOK / ".como" / "deps"
 # conduit and playbook have no public remote yet; their entries make the
 # clone leg degrade to skip-with-notice until the owner pushes them.
 PINS = {
-    "conduit": "b92ce8b84ec80acbf951d97d0a45c1bef5748834",  # no remote yet
-    "adroit": "df4245b423b0d86a53ab48ae8798138b46761b7a",
-    "tuesday": "452fd1ecf539b5c7c600d5bdccdc9dfdc941c246",
-    "assessments": "3515ca34575c1fc20391c8543f0f21258e4b376d",
-    "pulse": "e3a679491cab63f2cf6588c320aa111f6d8ca2e1",
+    "conduit": "bd01d2088ac36a4e680bf88f301334264d39348d",
+    "adroit": "5e59f367b8e5044318b19ac1e32e7b2618d4c0e1",
+    "tuesday": "22c5cc46853401c508a1df69ccb4ca737b6fb70f",
+    "assessments": "005608f08d1ab413f5083469f65f614c7be67109",
+    "pulse": "98e9f88c810087068da5672fddac07b3b0067f52",
     "playbook": "30ab2da6410e5e6d3d8eeb3b709c23654a23a4d2",  # no remote yet
 }
 
