@@ -1,0 +1,371 @@
+#!/usr/bin/env python3
+"""refresh-evidence — regenerate the per-run dogfood evidence pages.
+
+Each captured full-loop run directory docs/iteration-N/run-N (the
+workspace evidence ledger, a local-only sibling git repo) regenerates
+exactly one book page, src/loop/dogfood/run-N.md, replacing whatever sits
+between each
+
+    <!-- evidence:NAME-start --> ... <!-- evidence:NAME-end -->
+
+anchor pair. Runs ACCUMULATE: a new run's directory creates a new page
+beside the existing ones (anchors filled mechanically, surrounding prose
+left to a human, with a printed reminder to add the SUMMARY.md line) — an
+earlier run's page is never overwritten by a later run.
+
+    scripts/refresh-evidence [RUN_DIR]
+
+With no RUN_DIR every committed run directory under
+${COMO_DOCS_DIR:-../docs}/iteration-*/ is refreshed, so new run dirs are
+picked up as they land and their absence beforehand breaks nothing. The
+docs ledger is local-only by policy (docs/README.md: no remote, ever), so
+its resolution is the suite convention's env -> sibling legs only — there
+is deliberately NO clone leg; a missing ledger is an actionable error
+naming the knob (refreshing evidence is meaningless without captured
+runs). Working artifacts from an in-flight run live in per-run unique
+/tmp directories and are only consumed here once captured to
+docs/iteration-N/run-N (the run-dir convention in the docs repo).
+
+Extraction is deterministic (same run dir in, byte-identical page out), so
+running the script twice is a no-op — `git diff` clean is the idempotency
+proof. Artifacts are never fabricated: a missing artifact or anchor is a
+hard error, not a silent skip.
+
+Anchors and their source artifacts:
+
+  pulse       pulse-report.json   — seeded k-anonymous sentiment aggregate
+  assess      assessment.yaml     — authored assessment (counts + header)
+  import      import-summary.json — the seeded Proposed-ADR list
+  plan        *.json plan reads   — stored-plan determinism (sha256 re-hash)
+  verify      conduit-verify.json — the six contract checks, verbatim
+  tuesday     tuesday-report.json — the adr_totals rollup excerpt
+  crosscheck  cross-check.txt     — the loop-closure verdict, verbatim
+"""
+
+import hashlib
+import json
+import os
+import re
+import sys
+from pathlib import Path
+
+BOOK = Path(__file__).resolve().parent.parent
+PAGES_DIR = BOOK / "src" / "loop" / "dogfood"
+# The workspace evidence ledger: ${COMO_DOCS_DIR:-../docs}. Local-only by
+# policy — env -> sibling, no clone leg (see the module docstring).
+DOCS = Path(os.environ["COMO_DOCS_DIR"]) if os.environ.get("COMO_DOCS_DIR") else BOOK.parent / "docs"
+RUN_NAME = re.compile(r"^run-(\d+)$")
+
+
+def die(msg: str) -> None:
+    print(f"refresh-evidence: ERROR: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def fence(lang: str, body: str) -> str:
+    return f"```{lang}\n{body.rstrip()}\n```"
+
+
+def load_json(run: Path, name: str):
+    path = run / name
+    if not path.exists():
+        die(f"artifact {path} does not exist")
+    return json.loads(path.read_text())
+
+
+# ---------------------------------------------------------------------------
+# Generators — one per anchor, each reading only run-dir artifacts.
+# ---------------------------------------------------------------------------
+
+
+def gen_pulse(run: Path) -> str:
+    """pulse-report.json → header facts + one line per question batch."""
+    report = load_json(run, "pulse-report.json")
+    lines = [
+        f"schema: {report['schema']}   seed: {report['seed']}",
+        f"data_source: {report['data_source']}",
+        f"flows: {report['total_flows']} total, {report['successful']} passed,"
+        f" {report['failed']} failed",
+    ]
+    scored = []
+    for batch in report["batches"]:
+        seg = batch["aggregation"]["segments"][0]
+        if seg["suppressed"]:
+            scored.append((None, f"suppressed (k-anonymity)  \"{batch['question_text']}\""))
+        else:
+            scored.append((seg["average_score"], f"avg {seg['average_score']}  \"{batch['question_text']}\""))
+    weakest = min((s for s, _ in scored if s is not None), default=None)
+    for score, line in scored:
+        marker = "   <- weakest signal" if score is not None and score == weakest else ""
+        lines.append(line + marker)
+    return fence("text", "\n".join(lines))
+
+
+def gen_assess(run: Path) -> str:
+    """assessment.yaml → structure counts + the top-level header fields."""
+    path = run / "assessment.yaml"
+    if not path.exists():
+        die(f"artifact {path} does not exist")
+    text = path.read_text()
+    try:
+        import yaml  # type: ignore
+
+        doc = yaml.safe_load(text)
+        domains = doc["domains"]
+        practices = [p for d in domains for p in d["practices"]]
+        questions = [q for p in practices for q in p["questions"]]
+        n_dom, n_pra, n_que = len(domains), len(practices), len(questions)
+        header = {k: doc[k] for k in ("name", "description", "goal")}
+    except ImportError:
+        # Stdlib fallback: the export nests by fixed two-space indentation.
+        n_dom = len(re.findall(r"^- id:", text, re.M))
+        n_pra = len(re.findall(r"^  - id:", text, re.M))
+        n_que = len(re.findall(r"^    - id:", text, re.M))
+        header = {}
+        for key in ("name", "description", "goal"):
+            m = re.search(rf"^{key}: (.+)$", text, re.M)
+            if not m:
+                die(f"assessment.yaml has no top-level {key!r}")
+            header[key] = m.group(1)
+    lines = [f"{n_dom} domains, {n_pra} practices, {n_que} questions"]
+    lines += [f"{k}: {v}" for k, v in header.items()]
+    return fence("text", "\n".join(lines))
+
+
+def gen_import(run: Path) -> str:
+    """import-summary.json → the seeded list, one aligned row per ADR."""
+    summary = load_json(run, "import-summary.json")
+    seeded, skipped = summary["seeded"], summary["skipped"]
+    head = (
+        f"seeded {len(seeded)} proposed ADRs"
+        f" from assessment \"{summary['assessment']}\""
+    )
+    if skipped:
+        head += f" ({len(skipped)} skipped as duplicate: {', '.join(skipped)})"
+    width = max(len(s["title"]) for s in seeded)
+    rows = [
+        f"  {s['reference']}  {s['title']:<{width}}  [{s['domain']}]"
+        for s in seeded
+    ]
+    return fence("text", "\n".join([head] + rows))
+
+
+def gen_plan(run: Path) -> str:
+    """Stored-plan determinism: re-hash every captured `plan -o json` read.
+
+    A plan artifact is any run-dir JSON shaped {reference, title, plan,
+    stored}. The sha256 of the captured file IS the determinism sha: the
+    transcript records the same hash for two consecutive provider-free
+    reads, which this generator cross-checks before saying so.
+    """
+    transcript = (run / "transcript.md")
+    transcript_text = transcript.read_text() if transcript.exists() else ""
+    lines = []
+    for path in sorted(run.glob("*.json")):
+        try:
+            doc = json.loads(path.read_text())
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if not (isinstance(doc, dict) and {"reference", "title", "plan", "stored"} <= doc.keys()):
+            continue
+        sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        confirmed = sha[:8] in transcript_text
+        lines.append(
+            f"{path.name} — captured `plan -o json` for"
+            f" {doc['reference']} \"{doc['title']}\" — \"stored\": {json.dumps(doc['stored'])}"
+        )
+        lines.append(f"  sha256 {sha}")
+        if confirmed:
+            lines.append(
+                "  transcript.md records this same sha for two consecutive"
+                " provider-free reads"
+            )
+    if not lines:
+        die(f"no stored-plan artifacts (reference/title/plan/stored JSON) in {run}")
+    return fence("text", "\n".join(lines))
+
+
+def gen_verify(run: Path) -> str:
+    """conduit-verify.json → the artifact, verbatim."""
+    path = run / "conduit-verify.json"
+    if not path.exists():
+        die(f"artifact {path} does not exist")
+    return fence("json", path.read_text())
+
+
+def gen_tuesday(run: Path) -> str:
+    """tuesday-report.json → the adr_totals rollup and strict-mode fields."""
+    report = load_json(run, "tuesday-report.json")
+    excerpt = {
+        "adr_totals": report["adr_totals"],
+        "allocations": [
+            {
+                k: a[k]
+                for k in (
+                    "pr_number",
+                    "pr_title",
+                    "effort_score",
+                    "adr_id",
+                    "allocated_hours",
+                )
+            }
+            for a in report["allocations"]
+        ],
+        "total_effort_points": report["total_effort_points"],
+        "unallocated_prs": report["unallocated_prs"],
+    }
+    return fence("json", json.dumps(excerpt, indent=2))
+
+
+def gen_crosscheck(run: Path) -> str:
+    """cross-check.txt → the loop-closure verdict, verbatim."""
+    path = run / "cross-check.txt"
+    if not path.exists():
+        die(f"artifact {path} does not exist")
+    return fence("text", path.read_text())
+
+
+# Insertion order is page order: the skeleton for a new run's page emits
+# one stage section per generator, in loop order.
+GENERATORS = {
+    "pulse": gen_pulse,
+    "assess": gen_assess,
+    "import": gen_import,
+    "plan": gen_plan,
+    "verify": gen_verify,
+    "tuesday": gen_tuesday,
+    "crosscheck": gen_crosscheck,
+}
+
+SECTION_HEADINGS = {
+    "pulse": "1 — Measure, prior iteration: the pulse seed",
+    "assess": "2 — Assess: the report steers the assessment",
+    "import": "3 — Prescribe: the assessment seeds decisions",
+    "plan": "4 — Prescribe: accept, plan once, read forever",
+    "verify": "5 — Adopt: the decision becomes a merged PR",
+    "tuesday": "6 — Measure: the hours come back",
+    "crosscheck": "7 — Loop closure: two codebases, one ground truth",
+}
+
+
+# ---------------------------------------------------------------------------
+
+
+def page_for(run: Path) -> Path:
+    """docs/iteration-N/run-N → src/loop/dogfood/run-N.md."""
+    if not RUN_NAME.match(run.name):
+        die(
+            f"run directory {run} is not named run-<N>; capture working"
+            " artifacts to docs/iteration-N/run-N first (the committed-"
+            "evidence convention in the docs repo README)"
+        )
+    return PAGES_DIR / f"{run.name}.md"
+
+
+def skeleton(run: Path) -> str:
+    """A new run's page: stage sections with anchors, prose left to a human."""
+    n = RUN_NAME.match(run.name).group(1)
+    pointer = f"docs/{run.parent.name}/{run.name}"
+    parts = [
+        f"# Run {n}",
+        "",
+        f"<!-- TODO(human): introduce run {n} — date, what changed since the"
+        " previous run, which lanes used AI, what stayed on localhost. -->",
+        "",
+        "Every excerpt below is extracted **mechanically** from the captured",
+        "run artifacts by `just refresh-evidence` (see",
+        "[how these pages regenerate](../dogfood.md#how-these-pages-regenerate)).",
+        "The full artifact set lives in the workspace evidence ledger at",
+        f"`{pointer}/`.",
+    ]
+    for name in GENERATORS:
+        parts += [
+            "",
+            f"## {SECTION_HEADINGS[name]}",
+            "",
+            f"<!-- TODO(human): prose for this stage of run {n} -->",
+            "",
+            f"<!-- evidence:{name}-start -->",
+            "(pending first refresh)",
+            f"<!-- evidence:{name}-end -->",
+        ]
+    parts += [
+        "",
+        "## Honest warts",
+        "",
+        f"<!-- TODO(human): what run {n} found wrong, kept verbatim in the"
+        " artifacts rather than cleaned up. -->",
+        "",
+    ]
+    return "\n".join(parts)
+
+
+def refresh(run: Path) -> None:
+    page = page_for(run)
+    created = False
+    if not page.exists():
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text(skeleton(run))
+        created = True
+
+    text = page.read_text()
+    for name, gen in GENERATORS.items():
+        block = gen(run)
+        pattern = re.compile(
+            rf"(<!-- evidence:{name}-start -->\n).*?(\n<!-- evidence:{name}-end -->)",
+            re.S,
+        )
+        if not pattern.search(text):
+            die(f"anchor pair evidence:{name}-start/end missing from {page}")
+        # Function replacement: the block is inserted literally (no \-escapes).
+        text = pattern.sub(lambda m, b=block: m.group(1) + b + m.group(2), text)
+        print(f"refresh-evidence: evidence:{name} ← {run.parent.name}/{run.name}")
+
+    changed = text != page.read_text()
+    page.write_text(text)
+    rel = page.relative_to(BOOK)
+    if created:
+        print(
+            f"refresh-evidence: NEW page {rel} — list it under the dogfood"
+            " chapter in src/SUMMARY.md, replace its TODO prose, and add the"
+            " iteration's changelog entry"
+        )
+    print(
+        f"refresh-evidence: {rel} "
+        + ("updated" if changed else "unchanged (idempotent)")
+        + f" from {run}"
+    )
+
+
+def main() -> int:
+    if len(sys.argv) > 2:
+        die("usage: scripts/refresh-evidence [RUN_DIR]")
+    if len(sys.argv) == 2:
+        runs = [Path(sys.argv[1]).resolve()]
+        if not runs[0].is_dir():
+            die(f"run directory {runs[0]} does not exist")
+    else:
+        runs = sorted(
+            (
+                p
+                for p in DOCS.glob("iteration-*/run-*")
+                if p.is_dir() and RUN_NAME.match(p.name)
+            ),
+            key=lambda p: (
+                int(m.group()) if (m := re.search(r"\d+", p.parent.name)) else 0,
+                int(RUN_NAME.match(p.name).group(1)),
+            ),
+        )
+        if not runs:
+            die(
+                f"no committed run directories matching {DOCS}/iteration-*/run-N"
+                " — the docs ledger is local-only by policy (no remote, never"
+                " cloned); set COMO_DOCS_DIR or check out ../docs beside this repo"
+            )
+    for run in runs:
+        refresh(run)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

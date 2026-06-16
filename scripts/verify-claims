@@ -1,0 +1,1266 @@
+#!/usr/bin/env python3
+"""verify-claims — the book's truthfulness gate (ADR-0003).
+
+Asserts the book's load-bearing claims against the sibling repos' reality:
+
+  1. The Adopt chapter's conduit -> tuesday contract table string-matches
+     the constants in ../conduit/src/contract.rs.
+  2. Every CLI invocation the book quotes exists: adroit / conduit /
+     tuesday-report / assessments subcommands and load-bearing flags —
+     including the forge-neutrality pin (N=3 proven: conduit must offer
+     exactly gitea+github+gitlab), tuesday's SME-usable evidence (the
+     quickstart page and the --from/--to range), and the customer-demo
+     kit the Adopt chapter points at (page, executable kit scripts,
+     conduit's accepted ADR-0015).
+  3. pulse sanity: the dogfood survey file exists and the book's
+     measure-report schema id matches pulse's ADR-0008 and source.
+  4. Badge sanity: any app badged spike or higher has a non-empty
+     adroit-managed ADR corpus in its repo's WORKING TREE — merged main,
+     not a side branch (the dogfooding floor) — the introduction's
+     TAPS table agrees with each chapter's badge line, and the playbook's
+     self-serve rung is pinned to its gating evidence (the template-check
+     recipe, scripts/init --fresh, its accepted ADR-0014, the Proposed
+     starter backlog, exactly two template-infrastructure records).
+  5. Evidence-ledger discipline: the per-iteration changelog is a
+     first-class SUMMARY page; every per-run evidence page under
+     src/loop/dogfood/ is listed in SUMMARY, states a captured-run
+     pointer that resolves in the workspace ledger (../docs), and has a
+     matching per-iteration changelog entry.
+
+Every assertion pins BOTH sides: the claim must still be present in the
+book (so a rewrite that drops a pinned claim updates this script too) and
+reality must match it.
+
+Sibling repos are resolved by the suite's uniform convention (recorded as
+ADR-0004), self-contained in this script: COMO_<REPO>_DIR env override ->
+sibling ../<name> -> gitignored clone cache .como/deps/<name> checked out
+at the rev this script declares in PINS -> skip-with-notice naming the
+knobs. The resolved source (sibling + HEAD sha, or cache + pinned rev) is
+printed per assertion group so pin drift stays visible. The clone leg is
+read-only (never pushes, never adds the cache as a remote, no credentials
+in URLs), honors COMO_OFFLINE=1 (an already-populated cache is used as-is,
+never fetched), and degrades to the skip when a repo has no reachable
+remote — conduit and playbook today. The ../docs evidence ledger is
+local-only by policy (docs/README.md): env -> sibling -> skip, NO clone
+leg ever. A fresh CI checkout proves less than a full portfolio checkout,
+by design.
+
+A red `just ci` when a sibling drifts is the feature, not a bug.
+
+Exit codes: 0 all green (skips allowed), 1 any claim red.
+"""
+
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+BOOK = Path(__file__).resolve().parent.parent
+SIBLINGS = BOOK.parent
+
+# --- The suite resolution convention (ADR-0004), self-contained ----------
+
+COMO_GIT_BASE = os.environ.get(
+    "COMO_GIT_BASE", "https://github.com/como-technologies"
+).rstrip("/")
+COMO_OFFLINE = os.environ.get("COMO_OFFLINE", "") == "1"
+CACHE = BOOK / ".como" / "deps"
+
+# The consumer-declared pins: the exact rev the clone-cache leg checks out
+# when no sibling checkout is present. A present sibling wins for local-dev
+# speed, but the printed resolve line flags a HEAD that differs from the
+# pin. Bumps are deliberate, reviewed edits — like conduit's adroit.rev.
+# conduit and playbook have no public remote yet; their entries make the
+# clone leg degrade to skip-with-notice until the owner pushes them.
+PINS = {
+    "conduit": "b92ce8b84ec80acbf951d97d0a45c1bef5748834",  # no remote yet
+    "adroit": "df4245b423b0d86a53ab48ae8798138b46761b7a",
+    "tuesday": "452fd1ecf539b5c7c600d5bdccdc9dfdc941c246",
+    "assessments": "9fb26e36f6a3524ff33e73c04ddefcab4922b4cc",
+    "pulse": "e3a679491cab63f2cf6588c320aa111f6d8ca2e1",
+    "playbook": "30ab2da6410e5e6d3d8eeb3b709c23654a23a4d2",  # no remote yet
+}
+
+
+def _git(args: list[str], cwd: Path) -> str | None:
+    """Run git in `cwd`; stripped stdout, or None on any failure."""
+    try:
+        proc = subprocess.run(
+            ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=120
+        )
+    except OSError:
+        return None
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
+def _head_note(path: Path, pin: str | None) -> str:
+    head = _git(["rev-parse", "HEAD"], path)
+    if head is None:
+        return " (not a git checkout)"
+    if pin and head != pin:
+        return (
+            f" (HEAD {head[:12]} — differs from the declared pin {pin[:12]};"
+            " validating local state, not the pinned contract)"
+        )
+    return f" (HEAD {head[:12]})"
+
+
+def _clone_at_pin(name: str, pin: str, dest: Path) -> bool:
+    """Read-only, anonymous clone of the pinned rev into the cache. Never
+    pushes, never registers the cache as a remote of this repo, never
+    carries credentials in the URL."""
+    url = f"{COMO_GIT_BASE}/{name}.git"
+    print(f"resolve: cloning {name} from {url} into {dest} (one-time cache)")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        cloned = subprocess.run(
+            ["git", "clone", "--quiet", "--filter=blob:none", url, str(dest)],
+            capture_output=True,
+            text=True,
+            timeout=600,
+        ).returncode == 0
+    except OSError:
+        cloned = False
+    if cloned and _git(["checkout", "--quiet", "--detach", pin], dest) is not None:
+        return True
+    shutil.rmtree(dest, ignore_errors=True)  # no half-populated cache
+    print(
+        f"notice: could not clone {name} at pin {pin[:12]} from {url}"
+        " (no remote yet, no network, or a stale COMO_GIT_BASE) — skipping"
+    )
+    return False
+
+
+def _resolve_repo(name: str) -> tuple[Path, str] | None:
+    pin = PINS.get(name)
+    env_var = f"COMO_{name.upper()}_DIR"
+    override = os.environ.get(env_var, "").strip()
+    if override:
+        path = Path(override).expanduser()
+        if not path.is_absolute():
+            path = (BOOK / path).resolve()
+        if path.is_dir():
+            return path, f"{env_var} {path}{_head_note(path, pin)}"
+        print(f"notice: {env_var}={override} is not a directory; trying the next leg")
+
+    sibling = SIBLINGS / name
+    if sibling.is_dir():
+        return sibling, f"sibling {sibling}{_head_note(sibling, pin)}"
+
+    if pin is None:
+        return None
+    dest = CACHE / name
+    if dest.is_dir():
+        head = _git(["rev-parse", "HEAD"], dest)
+        if head == pin:
+            return dest, f"cache {dest} @ pinned {pin[:12]}"
+        # The cache lags the declared pin: re-fetch on mismatch, never
+        # just trust existence — unless offline, where as-is is the rule.
+        if COMO_OFFLINE:
+            at = head[:12] if head else "unknown"
+            print(
+                f"notice: {name} cache is at {at}, not the declared pin"
+                f" {pin[:12]} (COMO_OFFLINE=1: using the cache as-is)"
+            )
+            return dest, f"cache {dest} @ {at} (stale vs pin {pin[:12]}, offline)"
+        if (
+            _git(["fetch", "--quiet", "origin"], dest) is not None
+            and _git(["checkout", "--quiet", "--detach", pin], dest) is not None
+        ):
+            return dest, f"cache {dest} @ pinned {pin[:12]} (refetched)"
+        print(
+            f"notice: {name} cache at {dest} could not reach pin {pin[:12]};"
+            " remove the cache dir or check COMO_GIT_BASE — skipping"
+        )
+        return None
+    if COMO_OFFLINE:
+        return None
+    if not _clone_at_pin(name, pin, dest):
+        return None
+    return dest, f"cache {dest} @ pinned {pin[:12]}"
+
+
+_resolved: dict[str, tuple[Path, str] | None] = {}
+
+
+def resolve_repo(name: str) -> Path | None:
+    """Resolve a sibling repo per the convention chain; None means the
+    caller skips with a notice. Resolution is computed once per repo, but
+    the resolved source is printed on every call — one line per assertion
+    group — so what each group validated is on the record."""
+    if name not in _resolved:
+        _resolved[name] = _resolve_repo(name)
+    hit = _resolved[name]
+    if hit is None:
+        return None
+    path, source = hit
+    print(f"resolve: {name} -> {source}")
+    return path
+
+
+def unresolved(name: str) -> str:
+    """The skip notice for an unresolved repo, naming every knob."""
+    return (
+        f"no {name} checkout (set COMO_{name.upper()}_DIR, check out"
+        f" ../{name}, or set COMO_GIT_BASE for the .como/deps clone cache)"
+    )
+
+
+def resolve_docs() -> Path | None:
+    """The workspace evidence ledger. docs is local-only by policy
+    (docs/README.md: no remote, ever), so this is env -> sibling -> None —
+    NO clone leg, by design."""
+    override = os.environ.get("COMO_DOCS_DIR", "").strip()
+    if override:
+        path = Path(override).expanduser()
+        if not path.is_absolute():
+            path = (BOOK / path).resolve()
+        if path.is_dir():
+            return path
+        print(f"notice: COMO_DOCS_DIR={override} is not a directory; trying the sibling")
+    docs = SIBLINGS / "docs"
+    return docs if docs.is_dir() else None
+
+
+def repo_binary(repo: Path, name: str) -> Path | None:
+    """A built binary inside a resolved checkout — release preferred over
+    debug (the convention's built-binary sentinel)."""
+    for profile in ("release", "debug"):
+        path = repo / "target" / profile / name
+        if path.is_file() and os.access(path, os.X_OK):
+            return path
+    return None
+
+passes: list[str] = []
+skips: list[str] = []
+failures: list[str] = []
+
+
+def ok(desc: str) -> None:
+    passes.append(desc)
+    print(f"ok:   {desc}")
+
+
+def skip(desc: str, why: str) -> None:
+    skips.append(desc)
+    print(f"skip: {desc} ({why})")
+
+
+def fail(claim: str, where: str, reality: str) -> None:
+    failures.append(claim)
+    print(f"FAIL: {claim}")
+    print(f"      book:    {where}")
+    print(f"      reality: {reality}")
+
+
+def book_line(relpath: str, needle: str) -> tuple[int, str] | None:
+    """Find `needle` in a book file; return (lineno, line) or None."""
+    path = BOOK / relpath
+    for i, line in enumerate(path.read_text().splitlines(), 1):
+        if needle in line:
+            return i, line
+    return None
+
+
+def assert_book_states(relpath: str, needle: str, what: str) -> tuple[int, str] | None:
+    """The claim itself must exist in the book; a dropped claim is drift too."""
+    hit = book_line(relpath, needle)
+    if hit is None:
+        fail(
+            f"book no longer states the pinned claim: {what}",
+            f"{relpath} (expected to contain {needle!r})",
+            "update the book or this gate — they describe the same contract",
+        )
+    return hit
+
+
+def run(cmd: list[str]) -> str | None:
+    """Run a sibling binary; combined stdout+stderr, or None on failure."""
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except OSError:
+        return None
+    return proc.stdout + proc.stderr
+
+
+def has_subcommand(help_text: str, name: str) -> bool:
+    return re.search(rf"^\s+{re.escape(name)}\s{{2,}}", help_text, re.M) is not None
+
+
+# ---------------------------------------------------------------------------
+# 1. The conduit -> tuesday contract table vs ../conduit/src/contract.rs
+# ---------------------------------------------------------------------------
+
+ADOPT = "src/loop/adopt.md"
+
+
+def check_contract_table() -> None:
+    conduit = resolve_repo("conduit")
+    if conduit is None:
+        skip("conduit -> tuesday contract table", unresolved("conduit"))
+        return
+    contract_path = conduit / "src" / "contract.rs"
+    if not contract_path.exists():
+        skip("conduit -> tuesday contract table", f"{contract_path} does not exist")
+        return
+    src = contract_path.read_text()
+
+    # Effort labels: the closed five-value set, byte-for-byte, in order.
+    hit = assert_book_states(ADOPT, "Effort label", "the contract table's effort-label row")
+    m = re.search(r"pub const EFFORT_LABELS[^=]*=\s*\[(.*?)\];", src, re.S)
+    real_labels = re.findall(r'"([^"]+)"', m.group(1)) if m else []
+    if hit:
+        lineno, line = hit
+        book_labels = re.findall(r"`(effort:[0-9][a-z0-9-]*)`", line)
+        if book_labels == real_labels:
+            ok(f"effort-label set matches contract.rs EFFORT_LABELS ({len(real_labels)} values, in order)")
+        else:
+            fail(
+                "the closed effort-label set in the contract table",
+                f"{ADOPT}:{lineno} lists {book_labels}",
+                f"contract.rs EFFORT_LABELS is {real_labels}",
+            )
+
+    # No book page may mention an effort label outside the closed set.
+    for md in sorted(BOOK.glob("src/**/*.md")):
+        for i, line in enumerate(md.read_text().splitlines(), 1):
+            for label in re.findall(r"effort:[0-9]-[a-z-]+", line):
+                if label not in real_labels:
+                    fail(
+                        f"book mentions effort label {label!r} outside the closed set",
+                        f"{md.relative_to(BOOK)}:{i}",
+                        f"contract.rs EFFORT_LABELS is {real_labels}",
+                    )
+
+    # The remaining table rows, pinned to contract.rs's emission sites.
+    rows = [
+        (
+            "the `adr:<reference>` label",
+            "`adr:<reference>`",
+            'format!("adr:{reference}")',
+            "contract.rs adr_label()",
+        ),
+        (
+            "the `[ADR-NNNN] <title>` PR-title prefix",
+            "`[ADR-NNNN] <title>` prefix",
+            'format!("[{reference}] {title}")',
+            "contract.rs pr_title()",
+        ),
+        (
+            "the `Adr-Reference: ADR-NNNN` body trailer",
+            "`Adr-Reference: ADR-NNNN`",
+            'format!("Adr-Reference: {reference}")',
+            "contract.rs body_trailer()",
+        ),
+        (
+            "the `conduit/<ref-lower>/<slug>` branch shape",
+            "`conduit/<ref-lower>/<slug>`",
+            '"conduit/{}/{}"',
+            "contract.rs branch_name()",
+        ),
+    ]
+    for what, book_needle, src_needle, src_site in rows:
+        hit = assert_book_states(ADOPT, book_needle, what)
+        if hit is None:
+            continue
+        if src_needle in src:
+            ok(f"{what} matches {src_site}")
+        else:
+            fail(
+                what,
+                f"{ADOPT}:{hit[0]}",
+                f"{src_site} no longer emits it ({src_needle!r} not in contract.rs)",
+            )
+
+    # "all six `verify` checks" — contract.rs declares exactly six CHECK_* names.
+    hit = assert_book_states(ADOPT, "all six `verify` checks", "the six verify-check count")
+    if hit:
+        checks = re.findall(r"pub const (CHECK_\w+)", src)
+        if len(checks) == 6:
+            ok("contract.rs declares exactly six CHECK_* verify checks")
+        else:
+            fail(
+                "the book counts six `verify` checks",
+                f"{ADOPT}:{hit[0]}",
+                f"contract.rs declares {len(checks)}: {checks}",
+            )
+
+
+# ---------------------------------------------------------------------------
+# 2. Every CLI invocation the book quotes exists
+# ---------------------------------------------------------------------------
+
+
+def check_adroit_cli() -> None:
+    repo = resolve_repo("adroit")
+    if repo is None:
+        skip("adroit CLI surface", unresolved("adroit"))
+        return
+    bin_path = repo_binary(repo, "adroit")
+    if bin_path is None:
+        skip(
+            "adroit CLI surface",
+            f"no built adroit under {repo}/target (run 'cargo build' there;"
+            " a clone-cache checkout has no build tree)",
+        )
+        return
+    help_text = run([str(bin_path), "--help"])
+    if help_text is None:
+        fail("adroit --help runs", "src/loop/prescribe.md", f"{bin_path} failed to execute")
+        return
+
+    # Each subcommand the book quotes, tied to where it quotes it.
+    quoted = [
+        ("manifest", "src/loop/prescribe.md", "adroit manifest -o json"),
+        ("list", "src/loop/prescribe.md", "adroit list --status accepted -o json"),
+        ("show", "src/loop/prescribe.md", "adroit show 1 -o json"),
+        ("plan", "src/loop/prescribe.md", "adroit plan 1 --save"),
+        ("import", "src/loop/prescribe.md", "adroit import --from-assessment"),
+        ("lint", "src/loop/prescribe.md", "adroit lint 1 -o json"),
+        ("set-status", "src/loop/prescribe.md", "adroit set-status 1 accepted"),
+        ("mcp", "src/loop/prescribe.md", "MCP projection"),
+        ("check", "src/products/playbook.md", "`adroit check`"),
+        ("index", "src/products/playbook.md", "`adroit index --check`"),
+    ]
+    for name, relpath, needle in quoted:
+        hit = assert_book_states(relpath, needle, f"the `adroit {name}` invocation")
+        if hit is None:
+            continue
+        if has_subcommand(help_text, name):
+            ok(f"adroit --help lists `{name}` (quoted at {relpath}:{hit[0]})")
+        else:
+            fail(
+                f"the book quotes `adroit {name}`",
+                f"{relpath}:{hit[0]}",
+                f"`{name}` is not in adroit --help",
+            )
+
+    # The import seam's flags, the book's central Assess -> Prescribe hand-off.
+    import_help = run([str(bin_path), "import", "--help"]) or ""
+    for flag, relpath, needle in [
+        ("--from-assessment", "src/loop/prescribe.md", "--from-assessment export.yaml"),
+        ("--dry-run", "src/loop/assess.md", "--dry-run -o json"),
+    ]:
+        hit = assert_book_states(relpath, needle, f"the `adroit import {flag}` flag")
+        if hit is None:
+            continue
+        if flag in import_help:
+            ok(f"adroit import --help has {flag} (quoted at {relpath}:{hit[0]})")
+        else:
+            fail(
+                f"the book quotes `adroit import {flag}`",
+                f"{relpath}:{hit[0]}",
+                f"{flag} is not in adroit import --help",
+            )
+
+
+def check_conduit_cli() -> None:
+    repo = resolve_repo("conduit")
+    if repo is None:
+        skip("conduit CLI surface", unresolved("conduit"))
+        return
+    bin_path = repo_binary(repo, "conduit")
+    if bin_path is None:
+        skip(
+            "conduit CLI surface",
+            f"no built conduit under {repo}/target (run 'just ci' there;"
+            " a clone-cache checkout has no build tree)",
+        )
+        return
+    help_text = run([str(bin_path), "--help"])
+    if help_text is None:
+        fail("conduit --help runs", ADOPT, f"{bin_path} failed to execute")
+        return
+    for name, needle in [
+        ("plan", "conduit plan 2 --forge gitea"),
+        ("run", "conduit run --forge gitea --once"),
+        ("verify", "conduit verify 2 --forge gitea -o json"),
+    ]:
+        hit = assert_book_states(ADOPT, needle, f"the `conduit {name}` invocation")
+        if hit is None:
+            continue
+        if has_subcommand(help_text, name):
+            ok(f"conduit --help lists `{name}` (quoted at {ADOPT}:{hit[0]})")
+        else:
+            fail(
+                f"the book quotes `conduit {name}`",
+                f"{ADOPT}:{hit[0]}",
+                f"`{name}` is not in conduit --help",
+            )
+    run_help = run([str(bin_path), "run", "--help"]) or ""
+    if "--once" in run_help:
+        ok("conduit run --help has --once")
+    else:
+        fail(
+            "the book quotes `conduit run --forge gitea --once`",
+            ADOPT,
+            "--once is not in conduit run --help",
+        )
+
+    # Forge-neutrality honesty: the book claims N=3 — the GitLab adapter
+    # landed and passed the same conformance suite and transcript diff
+    # that gated the claim at N=2 (conduit ADR-0016). Both sides pinned —
+    # the book must state the widened claim, and conduit must offer
+    # exactly the gitea/github/gitlab adapters. This pin fired as designed
+    # at the iteration-3 merge: red against the merged conduit until the
+    # book widened the claim on conformance evidence. A fourth adapter
+    # (or a removed one) goes red here again until the book moves with
+    # the evidence, instead of silently under- or overstating it.
+    hit = assert_book_states(ADOPT, "proven at N=3", "the N=3 forge-neutrality claim")
+    if hit:
+        values = re.search(r"--forge.*?\[possible values: ([^\]]+)\]", run_help)
+        forges = (
+            [v.strip() for v in values.group(1).split(",")] if values else []
+        )
+        if forges == ["gitea", "github", "gitlab"]:
+            ok(
+                "conduit run --help offers exactly [gitea, github, gitlab]"
+                " — the book's N=3 forge-neutrality claim holds"
+            )
+        else:
+            fail(
+                "the book claims forge-neutrality at N=3 (gitea, github, gitlab)",
+                f"{ADOPT}:{hit[0]}",
+                f"conduit run --help --forge possible values are {forges}",
+            )
+
+
+def check_tuesday_cli() -> None:
+    MEASURE = "src/loop/measure.md"
+    hit = assert_book_states(MEASURE, "`tuesday-report`", "the tuesday-report headless head")
+    repo = resolve_repo("tuesday")
+    if repo is None:
+        skip("tuesday-report crate", unresolved("tuesday"))
+        return
+    cargo = repo / "crates" / "tuesday-cli" / "Cargo.toml"
+    if not cargo.exists():
+        skip("tuesday-report crate", f"{cargo} does not exist")
+        return
+    if hit:
+        if 'name = "tuesday-report"' in cargo.read_text():
+            ok("tuesday ships the tuesday-report binary (crates/tuesday-cli/Cargo.toml)")
+        else:
+            fail(
+                "the book names tuesday's headless head `tuesday-report`",
+                f"{MEASURE}:{hit[0]}",
+                f"no [[bin]] name = \"tuesday-report\" in {cargo}",
+            )
+
+    # The SME-usable badge's gating evidence (iteration 3): the SME
+    # quickstart page must exist where the book points.
+    hit = assert_book_states(
+        MEASURE, "docs/src/usage/quickstart.md", "the SME quickstart pointer"
+    )
+    if hit:
+        quickstart = repo / "docs" / "src" / "usage" / "quickstart.md"
+        if quickstart.is_file():
+            ok("tuesday ships docs/src/usage/quickstart.md (the SME quickstart)")
+        else:
+            fail(
+                "the book stakes tuesday's SME-usable badge on its quickstart",
+                f"{MEASURE}:{hit[0]}",
+                f"{quickstart} does not exist",
+            )
+
+    bin_path = repo_binary(repo, "tuesday-report")
+    if bin_path is None:
+        skip(
+            "tuesday-report --help surface",
+            f"no built tuesday-report under {repo}/target (run 'cargo build"
+            " -p tuesday-cli' there; a clone-cache checkout has no build tree)",
+        )
+        return
+    help_text = run([str(bin_path), "--help"])
+    if help_text is None:
+        fail("tuesday-report --help runs", MEASURE, f"{bin_path} failed to execute")
+        return
+    for needle, book_needle in [
+        ("--strict", "--strict"),
+        ("adr_totals", "`adr_totals`"),
+        ("MonthlyReport", "MonthlyReport JSON"),
+        ("gitea", "--source gitea"),
+    ]:
+        hit = assert_book_states(MEASURE, book_needle, f"tuesday-report's {needle}")
+        if hit is None:
+            continue
+        if needle in help_text:
+            ok(f"tuesday-report --help mentions {needle} (quoted at {MEASURE}:{hit[0]})")
+        else:
+            fail(
+                f"the book stakes tuesday-report on {needle!r}",
+                f"{MEASURE}:{hit[0]}",
+                f"{needle!r} is not in tuesday-report --help",
+            )
+
+    # The SME-usable badge's other gating pin: the --from/--to multi-month
+    # range (tuesday ADR-0007) is a real flag pair, not prose. \b keeps
+    # --to from matching --token-file.
+    hit = assert_book_states(MEASURE, "`--from`/`--to`", "the multi-month range claim")
+    if hit:
+        if re.search(r"--from\b", help_text) and re.search(r"--to\b", help_text):
+            ok(
+                "tuesday-report --help has --from and --to (the multi-month"
+                f" range, claimed at {MEASURE}:{hit[0]})"
+            )
+        else:
+            fail(
+                "the book stakes tuesday's SME-usable badge on the"
+                " --from/--to multi-month range",
+                f"{MEASURE}:{hit[0]}",
+                "--from/--to are not both in tuesday-report --help",
+            )
+
+
+def check_assessments_cli() -> None:
+    ASSESS = "src/loop/assess.md"
+    verbs = [
+        ("author", ASSESS, "assessments author --brief"),
+        ("validate", ASSESS, "assessments validate"),
+        ("export", ASSESS, "schema-validated export"),
+    ]
+    repo = resolve_repo("assessments")
+    if repo is None:
+        skip("assessments CLI surface", unresolved("assessments"))
+        return
+    bin_path = repo_binary(repo, "assessments")
+    if bin_path is not None:
+        help_text = run([str(bin_path), "--help"])
+        if help_text is None:
+            fail("assessments --help runs", ASSESS, f"{bin_path} failed to execute")
+            return
+        for name, relpath, needle in verbs:
+            hit = assert_book_states(relpath, needle, f"the assessments `{name}` verb")
+            if hit is None:
+                continue
+            if has_subcommand(help_text, name):
+                ok(f"assessments --help lists `{name}` (claimed at {relpath}:{hit[0]})")
+            else:
+                fail(
+                    f"the book relies on `assessments {name}`",
+                    f"{relpath}:{hit[0]}",
+                    f"`{name}` is not in assessments --help",
+                )
+        return
+    # Cheaper proxy when the binary isn't built: the clap Subcommand enum.
+    cli_rs = repo / "src" / "cli.rs"
+    if not cli_rs.exists():
+        skip(
+            "assessments CLI surface",
+            f"neither a built assessments binary under {repo}/target nor {cli_rs} present",
+        )
+        return
+    src = cli_rs.read_text()
+    for name, relpath, needle in verbs:
+        hit = assert_book_states(relpath, needle, f"the assessments `{name}` verb")
+        if hit is None:
+            continue
+        variant = name.capitalize()
+        if re.search(rf"^\s+{variant}\b", src, re.M):
+            ok(f"assessments src/cli.rs defines `{name}` (binary not built; clap-enum proxy)")
+        else:
+            fail(
+                f"the book relies on `assessments {name}`",
+                f"{relpath}:{hit[0]}",
+                f"no `{variant}` variant in {cli_rs}",
+            )
+
+
+def check_demo_kit() -> None:
+    """The customer-demo kit the Adopt chapter stakes the dogfooding badge's
+    'where its evidence lives' on: the narrated page, the kit scripts, and
+    the conduit ADR that records the kit's design rules."""
+    repo = resolve_repo("conduit")
+    if repo is None:
+        skip("conduit customer-demo kit", unresolved("conduit"))
+        return
+
+    hit = assert_book_states(
+        ADOPT, "docs/src/usage/customer-demo.md", "the customer-demo page pointer"
+    )
+    if hit:
+        page = repo / "docs" / "src" / "usage" / "customer-demo.md"
+        if page.is_file():
+            ok("conduit ships docs/src/usage/customer-demo.md (the narrated demo)")
+        else:
+            fail(
+                "the book points at conduit's customer-demo page",
+                f"{ADOPT}:{hit[0]}",
+                f"{page} does not exist",
+            )
+
+    hit = assert_book_states(ADOPT, "`demo/kit/`", "the demo-kit pointer")
+    if hit:
+        entry_points = [
+            "demo-up",
+            "beat-1-measure-prior",
+            "beat-2-assess",
+            "beat-3-prescribe",
+            "beat-4-adopt",
+            "beat-5-measure",
+            "demo-down",
+        ]
+        missing = [
+            name
+            for name in entry_points
+            if not os.access(repo / "demo" / "kit" / name, os.X_OK)
+        ]
+        if not missing:
+            ok(
+                "conduit demo/kit ships all seven executable entry points"
+                " (demo-up, five beats, demo-down)"
+            )
+        else:
+            fail(
+                "the book describes the demo kit as stand-up + five beats + teardown",
+                f"{ADOPT}:{hit[0]}",
+                f"not executable under {repo / 'demo' / 'kit'}: {missing}",
+            )
+
+    hit = assert_book_states(ADOPT, "ADR-0015", "the kit-design decision pointer")
+    if hit:
+        adr15 = sorted((repo / "adr" / "accepted").glob("0015-*.md"))
+        if adr15:
+            ok("conduit ADR-0015 (the customer-demo kit) is accepted")
+        else:
+            fail(
+                "the book cites conduit's ADR-0015 for the kit's design rules",
+                f"{ADOPT}:{hit[0]}",
+                f"no accepted 0015-*.md in {repo / 'adr' / 'accepted'}",
+            )
+
+
+# ---------------------------------------------------------------------------
+# 3. pulse sanity
+# ---------------------------------------------------------------------------
+
+
+def check_pulse() -> None:
+    MEASURE = "src/loop/measure.md"
+    pulse = resolve_repo("pulse")
+    if pulse is None:
+        skip("pulse sanity", unresolved("pulse"))
+        return
+
+    # The checked-in dogfood survey the book describes.
+    hit = assert_book_states(MEASURE, "checked-in TOML file", "the survey-is-data claim")
+    retro = pulse / "dogfood" / "iteration-retro.toml"
+    if hit:
+        if retro.exists():
+            ok("pulse dogfood/iteration-retro.toml exists (the checked-in survey)")
+        else:
+            fail(
+                "the book says pulse's survey is a checked-in TOML file",
+                f"{MEASURE}:{hit[0]}",
+                f"{retro} does not exist",
+            )
+
+    # The measure-report schema id, in the recorded decision and the source.
+    SCHEMA = "pulse.measure-report/v1"
+    hit = assert_book_states(MEASURE, f"`{SCHEMA}`", "the measure-report schema id")
+    if hit:
+        adr8 = sorted((pulse / "adr" / "accepted").glob("0008-*.md"))
+        if adr8 and SCHEMA in adr8[0].read_text():
+            ok(f"pulse ADR-0008 records the schema id {SCHEMA}")
+        else:
+            fail(
+                f"the book pins the schema id `{SCHEMA}` to pulse ADR-0008",
+                f"{MEASURE}:{hit[0]}",
+                f"no accepted 0008-*.md in {pulse / 'adr' / 'accepted'} containing it",
+            )
+        in_source = any(
+            SCHEMA in rs.read_text() for rs in (pulse / "crates").rglob("*.rs")
+        )
+        if in_source:
+            ok(f"pulse source emits the schema id {SCHEMA}")
+        else:
+            fail(
+                f"the book says pulse reports identify as `{SCHEMA}`",
+                f"{MEASURE}:{hit[0]}",
+                f"the literal appears nowhere under {pulse / 'crates'}",
+            )
+
+    # ADR-0009 (seeded determinism) is also named by the book.
+    hit = assert_book_states(MEASURE, "ADR-0009", "the seeded-determinism decision")
+    if hit:
+        if sorted((pulse / "adr" / "accepted").glob("0009-*.md")):
+            ok("pulse ADR-0009 (seeded determinism) exists as accepted")
+        else:
+            fail(
+                "the book cites pulse ADR-0009",
+                f"{MEASURE}:{hit[0]}",
+                f"no accepted 0009-*.md in {pulse / 'adr' / 'accepted'}",
+            )
+
+    # ADR-0010: dogfooding (parked at M0) is pulse's recorded suite-done
+    # state — the iteration-2 handoff from the pulse lane. The badge line
+    # stays "dogfooding (parked)"; the badge checks above enforce that.
+    hit = assert_book_states(MEASURE, "ADR-0010", "the parked-is-suite-done decision")
+    if hit:
+        adr10 = sorted((pulse / "adr" / "accepted").glob("0010-*.md"))
+        if adr10 and "suite-done" in adr10[0].read_text():
+            ok("pulse ADR-0010 (dogfooding parked at M0 = suite-done) is accepted and records the bar")
+        else:
+            fail(
+                "the book pins pulse's suite-done state to an accepted ADR-0010",
+                f"{MEASURE}:{hit[0]}",
+                f"no accepted 0010-*.md recording the suite-done state in {pulse / 'adr' / 'accepted'}",
+            )
+
+
+# ---------------------------------------------------------------------------
+# 4. Badge sanity — the dogfooding floor + intro-table consistency
+# ---------------------------------------------------------------------------
+
+
+def check_playbook_selfserve() -> None:
+    """The playbook's self-serve rung, pinned to the evidence that gated it
+    (playbook ADR-0014): the claim must stand on both pages that state it,
+    and the playbook repo must still have the template-check recipe, an
+    executable scripts/init with --fresh, the accepted scoping record, a
+    Proposed starter backlog, and exactly two template-infrastructure
+    records (the records --fresh keeps Accepted)."""
+    PAGES = ["src/products/playbook.md", "src/loop/prescribe.md"]
+    hits = [
+        assert_book_states(page, "`just template-check`", "the self-serve rung claim")
+        for page in PAGES
+    ]
+    if not any(hits):
+        return
+    repo = resolve_repo("playbook")
+    if repo is None:
+        skip("the playbook self-serve rung evidence", unresolved("playbook"))
+        return
+
+    justfile = repo / "justfile"
+    if justfile.is_file() and re.search(
+        r"^template-check:", justfile.read_text(), re.M
+    ):
+        ok("playbook justfile has the template-check recipe (the self-serve proof)")
+    else:
+        fail(
+            "the book stakes the self-serve rung on `just template-check`",
+            f"{PAGES[0]} and {PAGES[1]}",
+            f"no template-check recipe in {justfile}",
+        )
+
+    init = repo / "scripts" / "init"
+    if init.is_file() and os.access(init, os.X_OK) and "--fresh" in init.read_text():
+        ok("playbook scripts/init is executable and supports --fresh")
+    else:
+        fail(
+            "the self-serve claim's documented first-clone steps run scripts/init",
+            f"{PAGES[0]} and {PAGES[1]}",
+            f"{init} is missing, not executable, or has no --fresh",
+        )
+
+    hit = assert_book_states(PAGES[0], "ADR-0014", "the self-serve scoping decision")
+    if hit:
+        adr14 = sorted(
+            (repo / "src" / "adrs" / "accepted").glob(
+                "0014-scope-the-self-serve-rung*.md"
+            )
+        )
+        if adr14:
+            ok("playbook ADR-0014 (scope the self-serve rung) is accepted")
+        else:
+            fail(
+                "the book scopes the self-serve rung by playbook ADR-0014",
+                f"{PAGES[0]}:{hit[0]}",
+                "no accepted 0014-scope-the-self-serve-rung*.md in"
+                f" {repo / 'src' / 'adrs' / 'accepted'}",
+            )
+
+    hit = assert_book_states(
+        PAGES[0], "Proposed starter backlog", "the starter-backlog claim"
+    )
+    if hit:
+        proposed = [
+            p
+            for p in (repo / "src" / "adrs" / "proposed").glob("*.md")
+            if ADR_FILE.search(p.name)
+        ]
+        if len(proposed) >= 3:
+            ok(
+                f"playbook ships a Proposed starter backlog ({len(proposed)}"
+                " records, >= 3)"
+            )
+        else:
+            fail(
+                "the book claims the clone ships a Proposed starter backlog",
+                f"{PAGES[0]}:{hit[0]}",
+                f"only {len(proposed)} Proposed records under"
+                f" {repo / 'src' / 'adrs' / 'proposed'}",
+            )
+
+    # ADR-0014's role table: exactly two template-infrastructure records
+    # (ADR-0013 + ADR-0014 itself) stay Accepted through --fresh. A third
+    # marker (or a lost one) silently changes --fresh behavior — exactly
+    # the drift ADR-0014 calls out — so the count is pinned, not floored.
+    marked = [
+        p
+        for p in (repo / "src" / "adrs").rglob("*.md")
+        if ADR_FILE.search(p.name)
+        and "playbook:template-infrastructure" in p.read_text()
+    ]
+    if len(marked) == 2:
+        ok(
+            "playbook corpus carries exactly two template-infrastructure"
+            " records (the --fresh keep-set)"
+        )
+    else:
+        fail(
+            "the self-serve claim rests on ADR-0014's two-record"
+            " template-infrastructure keep-set",
+            f"{PAGES[0]} and {PAGES[1]}",
+            f"{len(marked)} marked records under {repo / 'src' / 'adrs'}:"
+            f" {[p.name for p in marked]}",
+        )
+
+LADDER = ["spec", "spike", "dogfooding", "SME-usable", "self-serve"]
+
+# heading in the book -> (sibling repo, adr corpus path inside it)
+BADGED_APPS = {
+    "assessments": ("assessments", "adr"),
+    "adroit": ("adroit", "adr"),
+    "conduit": ("conduit", "adr"),
+    "tuesday": ("tuesday", "adr"),
+    "pulse": ("pulse", "adr"),
+    "The playbook": ("playbook", "src/adrs"),
+}
+
+BADGE_PAGES = [
+    "src/loop/assess.md",
+    "src/loop/prescribe.md",
+    "src/loop/adopt.md",
+    "src/loop/measure.md",
+    "src/products/playbook.md",
+]
+
+ADR_FILE = re.compile(r"\d{4}-.+\.md$")
+
+
+def corpus_files(repo: Path, adr_rel: str) -> list[str]:
+    root = repo / adr_rel
+    if not root.exists():
+        return []
+    return [str(p) for p in root.rglob("*.md") if ADR_FILE.search(p.name)]
+
+
+def parse_badges() -> dict[str, list[tuple[str, int, str]]]:
+    """app heading -> [(badge, lineno, relpath)] from every badge line."""
+    found: dict[str, list[tuple[str, int, str]]] = {}
+    for relpath in BADGE_PAGES:
+        heading = ""
+        for i, line in enumerate((BOOK / relpath).read_text().splitlines(), 1):
+            h = re.match(r"#+ (.+)", line)
+            if h:
+                heading = h.group(1).strip()
+                continue
+            m = re.search(r"\*\*Maturity: ([A-Za-z-]+)( \(parked\))?\*\*", line)
+            if m:
+                found.setdefault(heading, []).append((m.group(1), i, relpath))
+    return found
+
+
+def check_badges() -> None:
+    badges = parse_badges()
+
+    for heading, sightings in badges.items():
+        if heading not in BADGED_APPS:
+            badge, lineno, relpath = sightings[0]
+            fail(
+                f"badge {badge!r} on unmapped app section {heading!r}",
+                f"{relpath}:{lineno}",
+                "extend BADGED_APPS in scripts/verify-claims",
+            )
+            continue
+        repo_name, adr_rel = BADGED_APPS[heading]
+        repo = resolve_repo(repo_name)
+        for badge, lineno, relpath in sightings:
+            where = f"{relpath}:{lineno}"
+            if badge not in LADDER:
+                fail(
+                    f"{heading} carries badge {badge!r}, which is not on the ladder",
+                    where,
+                    f"ADR-0002 ladder: {LADDER}",
+                )
+                continue
+            if LADDER.index(badge) < LADDER.index("spike"):
+                ok(f"{heading} badged {badge!r} ({where}) — below the dogfooding floor, no corpus required")
+                continue
+            if repo is None:
+                skip(f"{heading} dogfooding floor", unresolved(repo_name))
+                continue
+            files = corpus_files(repo, adr_rel)
+            if files:
+                ok(f"{heading} badged {badge!r} ({where}) — corpus non-empty ({len(files)} ADRs in {repo_name}/{adr_rel})")
+                continue
+            # No side-branch fallback: post-integration (iteration-2 I6/I7),
+            # the dogfooding floor is the merged-main working tree.
+            fail(
+                f"{heading} is badged {badge!r} but has no ADR corpus (the dogfooding floor)",
+                where,
+                f"no NNNN-*.md under {repo / adr_rel} in the working tree (merged main)",
+            )
+
+    # The introduction's TAPS table must agree with the chapter badge lines.
+    intro = BOOK / "src" / "introduction.md"
+    chapter_badge = {
+        heading: sightings[0][0] for heading, sightings in badges.items()
+    }
+    table_row = re.compile(r"^\| \[([^\]]+)\][^|]* \| [^|]+ \| [^|]+ \| ([^|]+) \|")
+    for i, line in enumerate(intro.read_text().splitlines(), 1):
+        m = table_row.match(line)
+        if not m:
+            continue
+        app, table_badge = m.group(1).strip(), m.group(2).strip()
+        rung = table_badge.replace(" (parked)", "")
+        if app not in chapter_badge:
+            if rung in LADDER:
+                fail(
+                    f"intro TAPS table badges {app!r} {table_badge!r} but no chapter badge line exists",
+                    f"src/introduction.md:{i}",
+                    f"chapter badge lines found for: {sorted(chapter_badge)}",
+                )
+            continue  # non-ladder rows ("delivered artifact", services "—")
+        if rung == chapter_badge[app]:
+            ok(f"intro TAPS table and chapter agree: {app} = {table_badge}")
+        else:
+            fail(
+                f"intro TAPS table says {app} is {table_badge!r}; its chapter says {chapter_badge[app]!r}",
+                f"src/introduction.md:{i}",
+                "the two badge statements must move together",
+            )
+
+
+# ---------------------------------------------------------------------------
+# 5. Evidence-ledger discipline — per-run pages + the per-iteration changelog
+# ---------------------------------------------------------------------------
+
+RUN_POINTER = re.compile(r"docs/iteration-(\d+)/run-(\d+)")
+
+
+def check_ledger() -> None:
+    summary = (BOOK / "src" / "SUMMARY.md").read_text()
+    changelog = BOOK / "src" / "changelog.md"
+
+    # The per-iteration changelog is a first-class SUMMARY page.
+    if changelog.exists() and "(./changelog.md)" in summary:
+        ok("the iteration changelog is a first-class SUMMARY page (src/changelog.md)")
+    else:
+        fail(
+            "the per-iteration changelog is a first-class page",
+            "src/SUMMARY.md (expected an entry linking ./changelog.md)",
+            f"changelog.md exists: {changelog.exists()}; SUMMARY links it: "
+            f"{'(./changelog.md)' in summary}",
+        )
+        return
+    changelog_text = changelog.read_text()
+
+    # Evidence accumulates as per-run pages: each one is listed in SUMMARY,
+    # states a captured-run pointer that resolves in the workspace ledger,
+    # and has a matching per-iteration changelog entry.
+    run_pages = sorted((BOOK / "src" / "loop" / "dogfood").glob("run-*.md"))
+    if not run_pages:
+        fail(
+            "the dogfood evidence accumulates as per-run pages",
+            "src/loop/dogfood/ (expected run-N.md pages)",
+            "no run-*.md page exists",
+        )
+    for page in run_pages:
+        rel = f"src/loop/dogfood/{page.name}"
+        if f"(./loop/dogfood/{page.name})" in summary:
+            ok(f"SUMMARY lists the per-run evidence page {page.name}")
+        else:
+            fail(
+                f"every per-run evidence page is first-class ({page.name})",
+                f"{rel} exists",
+                f"src/SUMMARY.md has no entry linking ./loop/dogfood/{page.name}",
+            )
+        m = RUN_POINTER.search(page.read_text())
+        if not m:
+            fail(
+                f"{page.name} states its captured-run pointer",
+                rel,
+                "no docs/iteration-N/run-N pointer anywhere in the page",
+            )
+            continue
+        # The ledger is local-only by policy: env -> sibling -> skip, no clone.
+        docs = resolve_docs()
+        run_dir = (docs / f"iteration-{m.group(1)}" / f"run-{m.group(2)}") if docs else None
+        if docs is None:
+            skip(
+                f"{page.name} run pointer {m.group(0)}",
+                "the docs ledger is not checked out (set COMO_DOCS_DIR or"
+                " check out ../docs — it is local-only by policy, never cloned)",
+            )
+        elif run_dir.is_dir():
+            ok(f"{page.name} run pointer {m.group(0)} resolves in the workspace ledger")
+        else:
+            fail(
+                f"{page.name} points at captured run evidence",
+                f"{rel} cites {m.group(0)}",
+                f"{run_dir} does not exist",
+            )
+        if re.search(rf"^## Iteration {m.group(1)}\b", changelog_text, re.M):
+            ok(f"changelog has an Iteration {m.group(1)} entry for {page.name}")
+        else:
+            fail(
+                f"every captured run has a per-iteration changelog entry ({page.name})",
+                rel,
+                f"src/changelog.md has no '## Iteration {m.group(1)}' heading",
+            )
+
+
+# ---------------------------------------------------------------------------
+# The iteration-4 SME-usable badge evidence (adroit + assessments). The badge
+# MOVE itself is gated by check_badges (corpus floor + intro-table agreement);
+# these pin the specific gating evidence the badge SENTENCES cite, so a
+# sentence can't drift from the repos' reality.
+# ---------------------------------------------------------------------------
+
+
+def check_adroit_sme_evidence() -> None:
+    PRESCRIBE = "src/loop/prescribe.md"
+    repo = resolve_repo("adroit")
+    if repo is None:
+        skip("adroit SME-usable evidence", unresolved("adroit"))
+        return
+
+    hit = assert_book_states(PRESCRIBE, "ADR-0013", "the build-from-source install decision")
+    if hit:
+        if sorted((repo / "adr" / "accepted").glob("0013-*.md")):
+            ok("adroit ADR-0013 (published distribution retired) is accepted")
+        else:
+            fail(
+                "the book stakes adroit's SME-usable rung on ADR-0013",
+                f"{PRESCRIBE}:{hit[0]}",
+                f"no accepted 0013-*.md in {repo / 'adr' / 'accepted'}",
+            )
+
+    hit = assert_book_states(PRESCRIBE, "ADR-0012", "the tagged-release discipline")
+    if hit:
+        adr12 = sorted((repo / "adr" / "accepted").glob("0012-*.md"))
+        tag = _git(["tag", "-l", "v0.2.0"], repo)
+        # merge-base --is-ancestor prints nothing; _git returns "" on success.
+        ancestor = _git(["merge-base", "--is-ancestor", "v0.2.0", "main"], repo)
+        if adr12 and tag and ancestor is not None:
+            ok("adroit ADR-0012 accepted and the v0.2.0 tag is an ancestor of main")
+        else:
+            fail(
+                "the book stakes adroit's SME rung on the v0.2.0 tagged release (ADR-0012)",
+                f"{PRESCRIBE}:{hit[0]}",
+                f"accepted 0012: {bool(adr12)}; v0.2.0 tag: {tag!r};"
+                f" tag-ancestor-of-main: {ancestor is not None}",
+            )
+
+    hit = assert_book_states(PRESCRIBE, "v0.2.0", "the adroit version the badge cites")
+    if hit:
+        bin_path = repo_binary(repo, "adroit")
+        if bin_path is None:
+            skip("adroit reports v0.2.0", "no built adroit binary under target/")
+        else:
+            ver = run([str(bin_path), "--version"]) or ""
+            if "0.2.0" in ver:
+                ok("adroit --version reports 0.2.0 (the badge's cited release)")
+            else:
+                fail(
+                    "the book cites adroit v0.2.0",
+                    f"{PRESCRIBE}:{hit[0]}",
+                    f"adroit --version is {ver.strip()!r}",
+                )
+
+
+def check_operating_page() -> None:
+    """The Operating-the-suite page's central stand-up command must be real:
+    it tells the reader to run conduit's demo kit, so conduit must ship it.
+    Keeps the runbook honest the way every other claim in this book is."""
+    OPERATING = "src/operating.md"
+    if not (BOOK / OPERATING).exists():
+        return
+    if "(./operating.md)" not in (BOOK / "src" / "SUMMARY.md").read_text():
+        fail(
+            "the Operating-the-suite page is first-class",
+            "src/SUMMARY.md (expected an entry linking ./operating.md)",
+            "operating.md exists but SUMMARY does not list it",
+        )
+    hit = assert_book_states(OPERATING, "demo/kit/demo-up", "the suite stand-up command")
+    if hit is None:
+        return
+    repo = resolve_repo("conduit")
+    if repo is None:
+        skip("operating-page stand-up command", unresolved("conduit"))
+        return
+    if os.access(repo / "demo" / "kit" / "demo-up", os.X_OK):
+        ok("operating.md's stand-up command (demo/kit/demo-up) exists and is executable")
+    else:
+        fail(
+            "the operating page tells the reader to run demo/kit/demo-up",
+            f"{OPERATING}:{hit[0]}",
+            f"{repo / 'demo' / 'kit' / 'demo-up'} is not executable",
+        )
+
+
+def check_assessments_sme_evidence() -> None:
+    ASSESS = "src/loop/assess.md"
+    repo = resolve_repo("assessments")
+    if repo is None:
+        skip("assessments SME-usable evidence", unresolved("assessments"))
+        return
+
+    hit = assert_book_states(ASSESS, "docs/src/walkthrough.md", "the facilitated walkthrough pointer")
+    if hit:
+        page = repo / "docs" / "src" / "walkthrough.md"
+        if page.is_file():
+            ok("assessments ships docs/src/walkthrough.md (the facilitated walkthrough)")
+        else:
+            fail(
+                "the book stakes assessments' SME-usable rung on its walkthrough",
+                f"{ASSESS}:{hit[0]}",
+                f"{page} does not exist",
+            )
+
+    hit = assert_book_states(ASSESS, "ADR-0009", "the SME-rung operating-model decision")
+    if hit:
+        if sorted((repo / "adr" / "accepted").glob("0009-*.md")):
+            ok("assessments ADR-0009 (no in-app auth at the SME rung) is accepted")
+        else:
+            fail(
+                "the book cites assessments ADR-0009 for the operating model",
+                f"{ASSESS}:{hit[0]}",
+                f"no accepted 0009-*.md in {repo / 'adr' / 'accepted'}",
+            )
+
+
+# ---------------------------------------------------------------------------
+
+def main() -> int:
+    print(f"verify-claims: book at {BOOK}, siblings under {SIBLINGS}")
+    check_contract_table()
+    check_adroit_cli()
+    check_adroit_sme_evidence()
+    check_conduit_cli()
+    check_demo_kit()
+    check_tuesday_cli()
+    check_assessments_cli()
+    check_assessments_sme_evidence()
+    check_operating_page()
+    check_pulse()
+    check_playbook_selfserve()
+    check_badges()
+    check_ledger()
+    print(
+        f"verify-claims: {len(passes)} passed, {len(skips)} skipped, "
+        f"{len(failures)} failed"
+    )
+    if failures:
+        print("verify-claims: RED — the book and a sibling repo disagree; "
+              "fix the book or the sibling, never the gate")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,2 +1,5 @@
 /target
 .claude/settings.local.json
+
+# Suite resolution convention (ADR-0004): gitignored clone/install cache
+.como/
