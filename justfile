@@ -59,7 +59,7 @@ adr-check:
         fi
     fi
     if [ -n "${bin}" ]; then
-        "${bin}" check --dir adr
+        "${bin}" check --dir src/adr
     else
         echo "skip: adroit not found (set ADROIT_BIN, build ../adroit, install adroit on PATH, or set COMO_GIT_BASE to arm the .como/tools cached install)"
     fi
