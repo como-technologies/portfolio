@@ -4,10 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - "src/**"
-      - "book.toml"
-      - "gruvbox/**"
-      - "mermaid*.js"
+      - "docs/src/**"
+      - "docs/book.toml"
+      - "docs/gruvbox/**"
+      - "docs/mermaid*.js"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -31,7 +31,7 @@ jobs:
           tool: mdbook,mdbook-mermaid
 
       - name: Build book
-        run: mdbook build
+        run: mdbook build docs
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

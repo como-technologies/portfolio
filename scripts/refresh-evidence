@@ -49,11 +49,13 @@ import re
 import sys
 from pathlib import Path
 
-BOOK = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parent.parent  # the portfolio repo root
+BOOK = REPO / "docs"  # the mdbook now lives under docs/ (uniform suite layout)
 PAGES_DIR = BOOK / "src" / "loop" / "dogfood"
 # The workspace evidence ledger: ${COMO_DOCS_DIR:-../docs}. Local-only by
-# policy — env -> sibling, no clone leg (see the module docstring).
-DOCS = Path(os.environ["COMO_DOCS_DIR"]) if os.environ.get("COMO_DOCS_DIR") else BOOK.parent / "docs"
+# policy — env -> sibling, no clone leg (see the module docstring). Resolved
+# beside the repo (REPO.parent), NOT under the book.
+DOCS = Path(os.environ["COMO_DOCS_DIR"]) if os.environ.get("COMO_DOCS_DIR") else REPO.parent / "docs"
 RUN_NAME = re.compile(r"^run-(\d+)$")
 
 

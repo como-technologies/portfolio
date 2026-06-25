@@ -57,8 +57,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-BOOK = Path(__file__).resolve().parent.parent
-SIBLINGS = BOOK.parent
+REPO = Path(__file__).resolve().parent.parent  # the portfolio repo root
+BOOK = REPO / "docs"  # the mdbook now lives under docs/ (uniform suite layout)
+SIBLINGS = REPO.parent  # sibling repos live beside portfolio
 
 # --- The suite resolution convention (ADR-0004), self-contained ----------
 
@@ -66,20 +67,22 @@ COMO_GIT_BASE = os.environ.get(
     "COMO_GIT_BASE", "https://github.com/como-technologies"
 ).rstrip("/")
 COMO_OFFLINE = os.environ.get("COMO_OFFLINE", "") == "1"
-CACHE = BOOK / ".como" / "deps"
+CACHE = REPO / ".como" / "deps"
 
 # The consumer-declared pins: the exact rev the clone-cache leg checks out
 # when no sibling checkout is present. A present sibling wins for local-dev
 # speed, but the printed resolve line flags a HEAD that differs from the
 # pin. Bumps are deliberate, reviewed edits — like conduit's adroit.rev.
-# conduit and playbook have no public remote yet; their entries make the
-# clone leg degrade to skip-with-notice until the owner pushes them.
+# Pinned at each sibling's published main carrying the docs/src/adr corpus, so a
+# fresh CI checkout (no siblings) clones the right reality. playbook has no
+# public remote yet, so its clone leg degrades to skip-with-notice (a present
+# ../playbook sibling resolves it for local-dev / the demo).
 PINS = {
-    "conduit": "bd01d2088ac36a4e680bf88f301334264d39348d",
-    "adroit": "5e59f367b8e5044318b19ac1e32e7b2618d4c0e1",
-    "tuesday": "22c5cc46853401c508a1df69ccb4ca737b6fb70f",
-    "assessments": "005608f08d1ab413f5083469f65f614c7be67109",
-    "pulse": "98e9f88c810087068da5672fddac07b3b0067f52",
+    "conduit": "e6aa1d283b974ee07cea54080561e723f7ed1ba6",
+    "adroit": "cc4375499059ee42b8e8fdba43c88c7ee9ab712d",
+    "tuesday": "b6b8d6e5af0c753e359309712ff7c7b2e53648ef",
+    "assessments": "1ce889ba4547f19bba26029a5c638052a08440a1",
+    "pulse": "332a33afaaffed38f4194014819740945ad761cd",
     "playbook": "30ab2da6410e5e6d3d8eeb3b709c23654a23a4d2",  # no remote yet
 }
 
@@ -140,7 +143,7 @@ def _resolve_repo(name: str) -> tuple[Path, str] | None:
     if override:
         path = Path(override).expanduser()
         if not path.is_absolute():
-            path = (BOOK / path).resolve()
+            path = (REPO / path).resolve()
         if path.is_dir():
             return path, f"{env_var} {path}{_head_note(path, pin)}"
         print(f"notice: {env_var}={override} is not a directory; trying the next leg")
@@ -216,7 +219,7 @@ def resolve_docs() -> Path | None:
     if override:
         path = Path(override).expanduser()
         if not path.is_absolute():
-            path = (BOOK / path).resolve()
+            path = (REPO / path).resolve()
         if path.is_dir():
             return path
         print(f"notice: COMO_DOCS_DIR={override} is not a directory; trying the sibling")
@@ -858,7 +861,7 @@ def check_playbook_selfserve() -> None:
     hit = assert_book_states(PAGES[0], "ADR-0014", "the self-serve scoping decision")
     if hit:
         adr14 = sorted(
-            (repo / "src" / "adrs" / "accepted").glob(
+            adr_accepted(repo, "playbook").glob(
                 "0014-scope-the-self-serve-rung*.md"
             )
         )
@@ -869,7 +872,7 @@ def check_playbook_selfserve() -> None:
                 "the book scopes the self-serve rung by playbook ADR-0014",
                 f"{PAGES[0]}:{hit[0]}",
                 "no accepted 0014-scope-the-self-serve-rung*.md in"
-                f" {repo / 'src' / 'adrs' / 'accepted'}",
+                f" {adr_accepted(repo, 'playbook')}",
             )
 
     hit = assert_book_states(
@@ -878,7 +881,7 @@ def check_playbook_selfserve() -> None:
     if hit:
         proposed = [
             p
-            for p in (repo / "src" / "adrs" / "proposed").glob("*.md")
+            for p in (repo / ADR_REL["playbook"] / "proposed").glob("*.md")
             if ADR_FILE.search(p.name)
         ]
         if len(proposed) >= 3:
@@ -891,7 +894,7 @@ def check_playbook_selfserve() -> None:
                 "the book claims the clone ships a Proposed starter backlog",
                 f"{PAGES[0]}:{hit[0]}",
                 f"only {len(proposed)} Proposed records under"
-                f" {repo / 'src' / 'adrs' / 'proposed'}",
+                f" {repo / ADR_REL['playbook'] / 'proposed'}",
             )
 
     # ADR-0014's role table: exactly two template-infrastructure records
@@ -900,7 +903,7 @@ def check_playbook_selfserve() -> None:
     # the drift ADR-0014 calls out — so the count is pinned, not floored.
     marked = [
         p
-        for p in (repo / "src" / "adrs").rglob("*.md")
+        for p in (repo / ADR_REL["playbook"]).rglob("*.md")
         if ADR_FILE.search(p.name)
         and "playbook:template-infrastructure" in p.read_text()
     ]
@@ -914,7 +917,7 @@ def check_playbook_selfserve() -> None:
             "the self-serve claim rests on ADR-0014's two-record"
             " template-infrastructure keep-set",
             f"{PAGES[0]} and {PAGES[1]}",
-            f"{len(marked)} marked records under {repo / 'src' / 'adrs'}:"
+            f"{len(marked)} marked records under {repo / ADR_REL['playbook']}:"
             f" {[p.name for p in marked]}",
         )
 
@@ -924,13 +927,16 @@ LADDER = ["spec", "spike", "dogfooding", "SME-usable", "self-serve"]
 # decisions render as book chapters and ship with the repo (NOT a bare top-level
 # docs/adr — that pre-relocation path no longer exists; pointing a check there
 # silently passes on an empty dir). One source of truth for the per-repo path:
+# Every app keeps its ADR corpus at the SAME path inside its mdbook source —
+# the suite's uniform docs/src/adr layout (book/ and root-src/ books were moved
+# under docs/, and the playbook's adrs/ was renamed adr/, to make this uniform).
 ADR_REL = {
-    "assessments": "book/src/adr",  # assessments' book lives under book/
+    "assessments": "docs/src/adr",
     "adroit": "docs/src/adr",
     "conduit": "docs/src/adr",
     "tuesday": "docs/src/adr",
     "pulse": "docs/src/adr",
-    "playbook": "src/adrs",  # the playbook names its corpus adrs/ (plural)
+    "playbook": "docs/src/adr",
 }
 
 
@@ -1229,11 +1235,11 @@ def check_assessments_sme_evidence() -> None:
         skip("assessments SME-usable evidence", unresolved("assessments"))
         return
 
-    hit = assert_book_states(ASSESS, "book/src/walkthrough.md", "the facilitated walkthrough pointer")
+    hit = assert_book_states(ASSESS, "docs/src/walkthrough.md", "the facilitated walkthrough pointer")
     if hit:
-        page = repo / "book" / "src" / "walkthrough.md"
+        page = repo / "docs" / "src" / "walkthrough.md"
         if page.is_file():
-            ok("assessments ships book/src/walkthrough.md (the facilitated walkthrough)")
+            ok("assessments ships docs/src/walkthrough.md (the facilitated walkthrough)")
         else:
             fail(
                 "the book stakes assessments' SME-usable rung on its walkthrough",

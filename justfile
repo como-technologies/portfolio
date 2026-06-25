@@ -18,7 +18,7 @@ verify-claims:
 
 # Build the book
 book:
-    mdbook build
+    mdbook build docs
 
 # Re-extract the per-run dogfood evidence pages (src/loop/dogfood/run-N.md)
 # from the captured full-loop run directories in the workspace evidence
@@ -59,18 +59,18 @@ adr-check:
         fi
     fi
     if [ -n "${bin}" ]; then
-        "${bin}" check --dir src/adr
+        "${bin}" check --dir docs/src/adr
     else
         echo "skip: adroit not found (set ADROIT_BIN, build ../adroit, install adroit on PATH, or set COMO_GIT_BASE to arm the .como/tools cached install)"
     fi
 
 # Serve the book locally with live reload
 book-serve:
-    mdbook serve --open
+    mdbook serve docs --open
 
 # Run mdbook tests (validates code blocks)
 book-test:
-    mdbook test
+    mdbook test docs
 
 # Clean built book artifacts
 book-clean:

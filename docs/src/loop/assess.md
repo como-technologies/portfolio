@@ -13,7 +13,7 @@ schema-validated document the Prescribe stage consumes mechanically.
 open, graded against the ladder (this book's ADR-0002): an external
 subject-matter expert can co-author an assessment with a Como facilitator
 alongside. The gating evidence, in the assessments repo: the facilitated
-walkthrough (`book/src/walkthrough.md`), every command on it run live
+walkthrough (`docs/src/walkthrough.md`), every command on it run live
 against a local 3B model before being written down; the recorded
 operating model (its ADR-0009 — no in-app login at this rung, loopback
 bind, facilitator-controlled tunnel for remote SMEs); the mechanical
