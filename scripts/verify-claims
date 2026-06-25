@@ -720,14 +720,14 @@ def check_demo_kit() -> None:
 
     hit = assert_book_states(ADOPT, "ADR-0015", "the kit-design decision pointer")
     if hit:
-        adr15 = sorted((repo / "docs/adr" / "accepted").glob("0015-*.md"))
+        adr15 = sorted(adr_accepted(repo, "conduit").glob("0015-*.md"))
         if adr15:
             ok("conduit ADR-0015 (the customer-demo kit) is accepted")
         else:
             fail(
                 "the book cites conduit's ADR-0015 for the kit's design rules",
                 f"{ADOPT}:{hit[0]}",
-                f"no accepted 0015-*.md in {repo / 'docs/adr' / 'accepted'}",
+                f"no accepted 0015-*.md in {adr_accepted(repo, 'conduit')}",
             )
 
 
@@ -760,14 +760,14 @@ def check_pulse() -> None:
     SCHEMA = "pulse.measure-report/v1"
     hit = assert_book_states(MEASURE, f"`{SCHEMA}`", "the measure-report schema id")
     if hit:
-        adr8 = sorted((pulse / "docs/adr" / "accepted").glob("0008-*.md"))
+        adr8 = sorted(adr_accepted(pulse, "pulse").glob("0008-*.md"))
         if adr8 and SCHEMA in adr8[0].read_text():
             ok(f"pulse ADR-0008 records the schema id {SCHEMA}")
         else:
             fail(
                 f"the book pins the schema id `{SCHEMA}` to pulse ADR-0008",
                 f"{MEASURE}:{hit[0]}",
-                f"no accepted 0008-*.md in {pulse / 'docs/adr' / 'accepted'} containing it",
+                f"no accepted 0008-*.md in {adr_accepted(pulse, 'pulse')} containing it",
             )
         in_source = any(
             SCHEMA in rs.read_text() for rs in (pulse / "crates").rglob("*.rs")
@@ -784,13 +784,13 @@ def check_pulse() -> None:
     # ADR-0009 (seeded determinism) is also named by the book.
     hit = assert_book_states(MEASURE, "ADR-0009", "the seeded-determinism decision")
     if hit:
-        if sorted((pulse / "docs/adr" / "accepted").glob("0009-*.md")):
+        if sorted(adr_accepted(pulse, "pulse").glob("0009-*.md")):
             ok("pulse ADR-0009 (seeded determinism) exists as accepted")
         else:
             fail(
                 "the book cites pulse ADR-0009",
                 f"{MEASURE}:{hit[0]}",
-                f"no accepted 0009-*.md in {pulse / 'docs/adr' / 'accepted'}",
+                f"no accepted 0009-*.md in {adr_accepted(pulse, 'pulse')}",
             )
 
     # ADR-0010: dogfooding (parked at M0) is pulse's recorded suite-done
@@ -798,14 +798,14 @@ def check_pulse() -> None:
     # stays "dogfooding (parked)"; the badge checks above enforce that.
     hit = assert_book_states(MEASURE, "ADR-0010", "the parked-is-suite-done decision")
     if hit:
-        adr10 = sorted((pulse / "docs/adr" / "accepted").glob("0010-*.md"))
+        adr10 = sorted(adr_accepted(pulse, "pulse").glob("0010-*.md"))
         if adr10 and "suite-done" in adr10[0].read_text():
             ok("pulse ADR-0010 (dogfooding parked at M0 = suite-done) is accepted and records the bar")
         else:
             fail(
                 "the book pins pulse's suite-done state to an accepted ADR-0010",
                 f"{MEASURE}:{hit[0]}",
-                f"no accepted 0010-*.md recording the suite-done state in {pulse / 'docs/adr' / 'accepted'}",
+                f"no accepted 0010-*.md recording the suite-done state in {adr_accepted(pulse, 'pulse')}",
             )
 
 
@@ -920,14 +920,33 @@ def check_playbook_selfserve() -> None:
 
 LADDER = ["spec", "spike", "dogfooding", "SME-usable", "self-serve"]
 
+# Each app keeps its ADR corpus INSIDE its published mdbook source tree, so the
+# decisions render as book chapters and ship with the repo (NOT a bare top-level
+# docs/adr — that pre-relocation path no longer exists; pointing a check there
+# silently passes on an empty dir). One source of truth for the per-repo path:
+ADR_REL = {
+    "assessments": "book/src/adr",  # assessments' book lives under book/
+    "adroit": "docs/src/adr",
+    "conduit": "docs/src/adr",
+    "tuesday": "docs/src/adr",
+    "pulse": "docs/src/adr",
+    "playbook": "src/adrs",  # the playbook names its corpus adrs/ (plural)
+}
+
+
+def adr_accepted(repo: Path, name: str) -> Path:
+    """The accepted/ ADR corpus dir inside `repo` for app `name` (ADR_REL)."""
+    return repo / ADR_REL[name] / "accepted"
+
+
 # heading in the book -> (sibling repo, adr corpus path inside it)
 BADGED_APPS = {
-    "assessments": ("assessments", "docs/adr"),
-    "adroit": ("adroit", "docs/adr"),
-    "conduit": ("conduit", "docs/adr"),
-    "tuesday": ("tuesday", "docs/adr"),
-    "pulse": ("pulse", "docs/adr"),
-    "The playbook": ("playbook", "src/adrs"),
+    "assessments": ("assessments", ADR_REL["assessments"]),
+    "adroit": ("adroit", ADR_REL["adroit"]),
+    "conduit": ("conduit", ADR_REL["conduit"]),
+    "tuesday": ("tuesday", ADR_REL["tuesday"]),
+    "pulse": ("pulse", ADR_REL["pulse"]),
+    "The playbook": ("playbook", ADR_REL["playbook"]),
 }
 
 BADGE_PAGES = [
@@ -1131,18 +1150,18 @@ def check_adroit_sme_evidence() -> None:
 
     hit = assert_book_states(PRESCRIBE, "ADR-0013", "the build-from-source install decision")
     if hit:
-        if sorted((repo / "docs/adr" / "accepted").glob("0013-*.md")):
+        if sorted(adr_accepted(repo, "adroit").glob("0013-*.md")):
             ok("adroit ADR-0013 (published distribution retired) is accepted")
         else:
             fail(
                 "the book stakes adroit's SME-usable rung on ADR-0013",
                 f"{PRESCRIBE}:{hit[0]}",
-                f"no accepted 0013-*.md in {repo / 'docs/adr' / 'accepted'}",
+                f"no accepted 0013-*.md in {adr_accepted(repo, 'adroit')}",
             )
 
     hit = assert_book_states(PRESCRIBE, "ADR-0012", "the tagged-release discipline")
     if hit:
-        adr12 = sorted((repo / "docs/adr" / "accepted").glob("0012-*.md"))
+        adr12 = sorted(adr_accepted(repo, "adroit").glob("0012-*.md"))
         tag = _git(["tag", "-l", "v0.2.0"], repo)
         # merge-base --is-ancestor prints nothing; _git returns "" on success.
         ancestor = _git(["merge-base", "--is-ancestor", "v0.2.0", "main"], repo)
@@ -1224,13 +1243,13 @@ def check_assessments_sme_evidence() -> None:
 
     hit = assert_book_states(ASSESS, "ADR-0009", "the SME-rung operating-model decision")
     if hit:
-        if sorted((repo / "docs/adr" / "accepted").glob("0009-*.md")):
+        if sorted(adr_accepted(repo, "assessments").glob("0009-*.md")):
             ok("assessments ADR-0009 (no in-app auth at the SME rung) is accepted")
         else:
             fail(
                 "the book cites assessments ADR-0009 for the operating model",
                 f"{ASSESS}:{hit[0]}",
-                f"no accepted 0009-*.md in {repo / 'docs/adr' / 'accepted'}",
+                f"no accepted 0009-*.md in {adr_accepted(repo, 'assessments')}",
             )
 
 

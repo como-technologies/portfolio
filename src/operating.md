@@ -11,13 +11,41 @@ uniform convention (each repo's ADR records it): an explicit `COMO_<REPO>_DIR`
 env override, else a sibling checkout `../<repo>`, else a pinned git clone into
 a gitignored cache. The simplest layout is all repos checked out under one
 parent (`assessments`, `adroit`, `conduit`, `tuesday`, `pulse`, `playbook`,
-`portfolio`) — then everything resolves with no configuration.
+`portfolio`) — then everything resolves with no configuration. Each app's ADR
+corpus ships **inside its own published mdbook source** (`docs/src/adr/`, or
+`book/src/adr/` for assessments), so the truthfulness gate in Ring 2 finds it in
+any checkout — no separate corpus download.
 
-Toolchain: a Rust toolchain with `cargo`, `just`, and `mdbook`; Docker (for the
-throwaway Gitea forge the Adopt demo uses); `ollama` with the `llama3.2` model
-(the only thing the AI lanes need — no API key, nothing phones home); `gh` is
-optional (GitHub read-only legs). conduit builds its pinned adroit itself with
-`just init-adroit`.
+**Toolchain.** A Rust toolchain with `cargo`, `just`, and `mdbook`; `git`;
+Docker with its daemon up and the `docker compose` plugin (the Adopt demo runs a
+throwaway Gitea forge in it); `gh` is optional (GitHub read-only legs). The AI
+lanes are **optional**: only the demo's `--live` variants call a local `ollama`
+serving `llama3.2` (no API key, nothing phones home) — the pre-baked fast path
+needs neither. conduit builds its pinned adroit itself with `just init-adroit`.
+
+Verify the demo's runtime prerequisites (and pull the model, if `ollama` is
+installed and you want the live lanes) with one command:
+
+```sh
+conduit/demo/kit/preflight        # checks docker; pulls llama3.2 if ollama is up
+```
+
+**Commit signing.** Nothing here asks you to change your git config. The suites
+that spin up throwaway git repos in their tests disable commit signing *in those
+disposable repos*, so a global `commit.gpgsign = true` (with no key for the
+throwaway identity) can't fail them.
+
+**Local-only by policy.** Two inputs are deliberately kept on the owner's
+machine and are not published; where either is absent the gate and the demo
+**skip or stop with a notice that names the knob**, never silently:
+
+- the **run-evidence ledger** (`COMO_DOCS_DIR`, else a sibling `../docs`) that
+  the per-run pages and `just refresh-evidence` read — so the run-evidence
+  claims below verify only where the ledger is checked out;
+- the **playbook** corpus the Adopt demo seeds onto the throwaway forge (the
+  fictional client's decisions). Provide it with `COMO_PLAYBOOK_DIR`, a sibling
+  `../playbook`, or `COMO_GIT_BASE` / `COMO_PLAYBOOK_GIT` for the clone cache.
+  It has no public remote yet (see [Publishing](#publishing)).
 
 ## Ring 1 — each app on its own
 
@@ -55,6 +83,7 @@ everything down:
 
 ```sh
 cd conduit
+demo/kit/preflight               # verify docker (+ pull llama3.2 for --live)
 just init-adroit                 # build the pinned adroit into .conduit/bin
 demo/kit/demo-up                 # throwaway Gitea + seeded playbook + all binaries
 demo/kit/beat-1-measure-prior    # pulse's prior-iteration signal
@@ -65,10 +94,17 @@ demo/kit/beat-5-measure          # tuesday --strict + Adopt<->Measure cross-chec
 demo/kit/demo-down               # destroys the forge; leaves nothing
 ```
 
+`init-adroit` resolves the pinned adroit by the suite convention — the adroit
+remote at the pinned rev, else a sibling `../adroit` (its HEAD, with a loud
+local-dev notice, when that checkout doesn't carry the exact pin because it
+hasn't been pushed yet). `demo-up` resolves the playbook and the sibling
+binaries the same way and seeds the throwaway forge; it stops early with named
+knobs if Docker isn't up or no playbook resolves (run `preflight` first).
+
 Each beat prints its talking point and the machine evidence it just produced
 (verify 6/6, byte-identical forge transcripts, `CROSS-CHECK PASS`). The
-pre-baked path runs every beat in seconds; `--live` recomputes the two ollama
-lanes for real (timings in the [customer demo](https://github.com/como-technologies/conduit)
+pre-baked path runs every beat in seconds and needs only Docker; `--live`
+recomputes the two ollama lanes for real (timings in the [customer demo](https://github.com/como-technologies/conduit)
 kit's narrated page). Deeper conformance is env-gated: `CONDUIT_E2E_GITEA=1`
 (live forge), `CONDUIT_E2E_ADROIT=1`, `CONDUIT_E2E_GITHUB=1`.
 
@@ -91,3 +127,13 @@ canonical remote — and reconciling the two repos whose origins carry separate
 owner-side work — is a deliberate set of owner actions, kept out of the loop's
 automation; the current per-repo procedure lives in the workspace ledger at
 `docs/iteration-4/owner-actions.md`.
+
+Two of those owner actions remove the last local-only edges so a cold public
+checkout runs the demo with no overrides:
+
+- **Push the pinned adroit rev** (`conduit/adroit.rev`) — push the commit and
+  its `v0.2.0` tag to the adroit remote. Until then `init-adroit` falls back to
+  a sibling `../adroit` (HEAD, local-dev only).
+- **Publish the playbook** corpus to a remote (or set `COMO_GIT_BASE` so the
+  clone leg resolves it). Until then the demo needs `COMO_PLAYBOOK_DIR` or a
+  sibling `../playbook`.
