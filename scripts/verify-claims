@@ -4,7 +4,11 @@
 Asserts the book's load-bearing claims against the sibling repos' reality:
 
   1. The Adopt chapter's conduit -> tuesday contract table string-matches
-     the constants in ../conduit/src/contract.rs.
+     the constants in ../conduit/src/contract.rs — and tuesday's strict-mode
+     hand-copy of the closed effort-label set (crates/tuesday-cli/src/
+     strict.rs VALID_EFFORT_LABELS) matches conduit's EFFORT_LABELS
+     byte-for-byte, in order (the two arrays share no crate; this is the
+     only gate tying them).
   2. Every CLI invocation the book quotes exists: adroit / conduit /
      tuesday-report / amaker (assessments' CLI) subcommands and
      load-bearing flags —
@@ -390,6 +394,68 @@ def check_contract_table() -> None:
                 f"{ADOPT}:{hit[0]}",
                 f"contract.rs declares {len(checks)}: {checks}",
             )
+
+
+def check_effort_label_parity() -> None:
+    """The closed effort-label set exists twice by design: conduit emits it
+    (src/contract.rs EFFORT_LABELS) and tuesday's --strict validates it
+    (crates/tuesday-cli/src/strict.rs VALID_EFFORT_LABELS) — hand-copied
+    twin arrays with no shared crate. The book stakes the Adopt -> Measure
+    hand-off on the two sides reading the same markers, so this ties the
+    copies together: byte-identical values, same order, or red."""
+    PARITY = "conduit <-> tuesday effort-label parity"
+    hit = assert_book_states(
+        ADOPT, "fixed set of markers", "the conduit -> tuesday shared-marker claim"
+    )
+    if hit is None:
+        return
+    conduit = resolve_repo("conduit")
+    if conduit is None:
+        skip(PARITY, unresolved("conduit"))
+        return
+    tuesday = resolve_repo("tuesday")
+    if tuesday is None:
+        skip(PARITY, unresolved("tuesday"))
+        return
+
+    sides = [
+        (
+            "conduit EFFORT_LABELS",
+            conduit / "src" / "contract.rs",
+            r"pub const EFFORT_LABELS[^=]*=\s*\[(.*?)\];",
+        ),
+        (
+            "tuesday VALID_EFFORT_LABELS",
+            tuesday / "crates" / "tuesday-cli" / "src" / "strict.rs",
+            r"const VALID_EFFORT_LABELS[^=]*=\s*\[(.*?)\];",
+        ),
+    ]
+    labels: list[list[str]] = []
+    for what, path, pattern in sides:
+        if not path.exists():
+            skip(PARITY, f"{path} does not exist")
+            return
+        m = re.search(pattern, path.read_text(), re.S)
+        if m is None:
+            fail(
+                f"{what} is where the parity gate pins it",
+                f"{ADOPT}:{hit[0]} (both stages read the same markers)",
+                f"no such const in {path} — update it or this gate together",
+            )
+            return
+        labels.append(re.findall(r'"([^"]+)"', m.group(1)))
+
+    if labels[0] and labels[0] == labels[1]:
+        ok(
+            f"effort-label parity: tuesday's strict-mode copy matches conduit's"
+            f" EFFORT_LABELS byte-for-byte ({len(labels[0])} values, in order)"
+        )
+    else:
+        fail(
+            "tuesday --strict validates the exact effort-label set conduit emits",
+            f"conduit src/contract.rs EFFORT_LABELS = {labels[0]}",
+            f"tuesday crates/tuesday-cli/src/strict.rs VALID_EFFORT_LABELS = {labels[1]}",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1269,6 +1335,7 @@ def check_assessments_sme_evidence() -> None:
 def main() -> int:
     print(f"verify-claims: book at {BOOK}, siblings under {SIBLINGS}")
     check_contract_table()
+    check_effort_label_parity()
     check_adroit_cli()
     check_adroit_sme_evidence()
     check_conduit_cli()
