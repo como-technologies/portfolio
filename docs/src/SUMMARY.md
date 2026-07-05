@@ -33,3 +33,4 @@
 
 [Iteration changelog](./changelog.md)
 [How this book stays true](./truthfulness.md)
+[KB substrate spike — evidence](./spikes/kb-substrate.md)

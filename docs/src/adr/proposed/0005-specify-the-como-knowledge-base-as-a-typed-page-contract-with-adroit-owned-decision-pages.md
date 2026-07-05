@@ -27,8 +27,9 @@ against. A candidate substrate exists: llm-wiki-engine (crates.io v0.4.x —
 git-backed Markdown wiki, per-type JSON-Schema frontmatter validation, typed
 graph edges, deterministic lint, MCP/ACP read seam, BYO-LLM).
 
-Two facts constrain the design, both spike-evidenced (local evidence ledger,
-spikes/2026-07-04-kb-substrate-spike.md):
+Two facts constrain the design, both spike-evidenced (published in this
+book: [KB substrate spike — evidence](../../spikes/kb-substrate.md),
+`docs/src/spikes/kb-substrate.md`):
 
 - adroit's frontmatter struct preserves NO unknown keys — a single adroit
   write silently destroys any foreign frontmatter field (demonstrated: one
@@ -112,8 +113,8 @@ substrate as a dependency now.
 
 ## Implementation
 
-The bounded spike (evidence in the local ledger) installed the candidate
-substrate, stood a wiki space up over a copy of the playbook content (3
+The bounded spike (evidence published in this book at
+`docs/src/spikes/kb-substrate.md`) installed the candidate substrate, stood a wiki space up over a copy of the playbook content (3
 guides, 10 glossary entries, a section page — typed and schema-validated),
 ran the engine's lint (0 errors on every KB-authored page; 10 invariant
 corpus-side link-model errors, documented as the structural clash above),
