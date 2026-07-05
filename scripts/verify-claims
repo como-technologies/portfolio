@@ -6,7 +6,8 @@ Asserts the book's load-bearing claims against the sibling repos' reality:
   1. The Adopt chapter's conduit -> tuesday contract table string-matches
      the constants in ../conduit/src/contract.rs.
   2. Every CLI invocation the book quotes exists: adroit / conduit /
-     tuesday-report / assessments subcommands and load-bearing flags —
+     tuesday-report / amaker (assessments' CLI) subcommands and
+     load-bearing flags —
      including the forge-neutrality pin (N=3 proven: conduit must offer
      exactly gitea+github+gitlab), tuesday's SME-usable evidence (the
      quickstart page and the --from/--to range), and the customer-demo
@@ -617,54 +618,58 @@ def check_tuesday_cli() -> None:
 
 
 def check_assessments_cli() -> None:
+    # assessments' headless CLI is the `amaker` binary (the repo keeps the
+    # assessments name; the product/CLI is amaker) — resolve the binary by
+    # that name so this never green-lights a stale pre-rename artifact.
     ASSESS = "src/loop/assess.md"
     verbs = [
-        ("author", ASSESS, "assessments author --brief"),
-        ("validate", ASSESS, "assessments validate"),
+        ("author", ASSESS, "amaker author --brief"),
+        ("validate", ASSESS, "amaker validate"),
         ("export", ASSESS, "schema-validated export"),
     ]
     repo = resolve_repo("assessments")
     if repo is None:
         skip("assessments CLI surface", unresolved("assessments"))
         return
-    bin_path = repo_binary(repo, "assessments")
+    bin_path = repo_binary(repo, "amaker")
     if bin_path is not None:
         help_text = run([str(bin_path), "--help"])
         if help_text is None:
-            fail("assessments --help runs", ASSESS, f"{bin_path} failed to execute")
+            fail("amaker --help runs", ASSESS, f"{bin_path} failed to execute")
             return
         for name, relpath, needle in verbs:
-            hit = assert_book_states(relpath, needle, f"the assessments `{name}` verb")
+            hit = assert_book_states(relpath, needle, f"the amaker `{name}` verb")
             if hit is None:
                 continue
             if has_subcommand(help_text, name):
-                ok(f"assessments --help lists `{name}` (claimed at {relpath}:{hit[0]})")
+                ok(f"amaker --help lists `{name}` (claimed at {relpath}:{hit[0]})")
             else:
                 fail(
-                    f"the book relies on `assessments {name}`",
+                    f"the book relies on `amaker {name}`",
                     f"{relpath}:{hit[0]}",
-                    f"`{name}` is not in assessments --help",
+                    f"`{name}` is not in amaker --help",
                 )
         return
-    # Cheaper proxy when the binary isn't built: the clap Subcommand enum.
-    cli_rs = repo / "src" / "cli.rs"
+    # Cheaper proxy when the binary isn't built: the clap Command enum in
+    # the amaker-cli crate (where the `amaker` binary's surface is defined).
+    cli_rs = repo / "crates" / "amaker-cli" / "src" / "lib.rs"
     if not cli_rs.exists():
         skip(
             "assessments CLI surface",
-            f"neither a built assessments binary under {repo}/target nor {cli_rs} present",
+            f"neither a built amaker binary under {repo}/target nor {cli_rs} present",
         )
         return
     src = cli_rs.read_text()
     for name, relpath, needle in verbs:
-        hit = assert_book_states(relpath, needle, f"the assessments `{name}` verb")
+        hit = assert_book_states(relpath, needle, f"the amaker `{name}` verb")
         if hit is None:
             continue
         variant = name.capitalize()
         if re.search(rf"^\s+{variant}\b", src, re.M):
-            ok(f"assessments src/cli.rs defines `{name}` (binary not built; clap-enum proxy)")
+            ok(f"amaker-cli lib.rs defines `{name}` (binary not built; clap-enum proxy)")
         else:
             fail(
-                f"the book relies on `assessments {name}`",
+                f"the book relies on `amaker {name}`",
                 f"{relpath}:{hit[0]}",
                 f"no `{variant}` variant in {cli_rs}",
             )

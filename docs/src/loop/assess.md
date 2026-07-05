@@ -38,10 +38,10 @@ Prescribe stage.
 
 ```sh
 # produce: author an assessment headlessly from a committed brief (local ollama)
-assessments author --brief examples/dogfood/brief.md
+amaker author --brief examples/dogfood/brief.md
 
 # gate: re-check the export against the published JSON Schema
-assessments validate assessment.yaml
+amaker validate assessment.yaml
 
 # the consuming side of the seam (run in the Prescribe stage)
 ADROIT_DIR=$(mktemp -d) adroit import \
