@@ -45,7 +45,7 @@ printed per assertion group so pin drift stays visible. The clone leg is
 read-only (never pushes, never adds the cache as a remote, no credentials
 in URLs), honors COMO_OFFLINE=1 (an already-populated cache is used as-is,
 never fetched), and degrades to the skip when a repo has no reachable
-remote — conduit and playbook today. The ../docs evidence ledger is
+remote — none of the pinned siblings today. The ../docs evidence ledger is
 local-only by policy (docs/README.md): env -> sibling -> skip, NO clone
 leg ever. A fresh CI checkout proves less than a full portfolio checkout,
 by design.
@@ -79,16 +79,17 @@ CACHE = REPO / ".como" / "deps"
 # speed, but the printed resolve line flags a HEAD that differs from the
 # pin. Bumps are deliberate, reviewed edits — like conduit's adroit.rev.
 # Pinned at each sibling's published main carrying the docs/src/adr corpus, so a
-# fresh CI checkout (no siblings) clones the right reality. playbook has no
-# public remote yet, so its clone leg degrades to skip-with-notice (a present
-# ../playbook sibling resolves it for local-dev / the demo).
+# fresh CI checkout (no siblings) clones the right reality. playbook is
+# published (2026-07-05, fresh-history cut) at como-technologies/playbook;
+# its pin is the public root commit, and a present ../playbook sibling still
+# wins for local-dev / the demo.
 PINS = {
     "conduit": "6dae385fd2b0cf1254139c9af35cd542d2aaad2c",
     "adroit": "683049bb7f3d48c55cfe96daceab38a448b4ec9f",
     "tuesday": "2f478807fefc16a107bf43acd9dd7ce5d6b23417",
     "assessments": "9b05ae4859f28281309961cb059ba0d288b0c48c",
     "pulse": "f3022b4e25c0f0242202e472ae29df4d778d4f87",
-    "playbook": "30ab2da6410e5e6d3d8eeb3b709c23654a23a4d2",  # no remote yet
+    "playbook": "dc7c604791b579baa7e5d19ff69c60207bfa4074",
 }
 
 
@@ -904,7 +905,14 @@ def check_playbook_selfserve() -> None:
         return
     repo = resolve_repo("playbook")
     if repo is None:
-        skip("the playbook self-serve rung evidence", unresolved("playbook"))
+        # The playbook is published; a badge whose evidence cannot be
+        # fetched is red, not skipped (the self-serve rung is a claim
+        # about what an outside reader can verify).
+        fail(
+            "the self-serve rung's evidence repo resolves",
+            f"{PAGES[0]} and {PAGES[1]}",
+            unresolved("playbook"),
+        )
         return
 
     justfile = repo / "justfile"
