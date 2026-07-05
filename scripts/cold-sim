@@ -62,6 +62,7 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -354,6 +355,14 @@ def main() -> int:
     print(f"cold-sim: sandbox {sandbox} (--from {args.source}); hostile env: "
           "gpgsign=true global gitconfig, /dev/null system config, COMO_* scrubbed")
     ollama_ok, docker_ok = probe_env_facts(env)
+
+    # The demo's throwaway forge binds a host port (conduit's FORGE_PORT
+    # knob, default 3000). Pick a free one so the rehearsal coexists with
+    # whatever the host's dev servers hold — Next.js et al default to 3000.
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        env["FORGE_PORT"] = str(s.getsockname()[1])
+    print(f"cold-sim: FORGE_PORT={env['FORGE_PORT']} (free host port for the throwaway forge)")
 
     github_base = os.environ.get("COMO_GIT_BASE", "https://github.com/como-technologies").rstrip("/")
     wanted = list(SUITE)  # includes playbook (published; --with-playbook is a no-op)
