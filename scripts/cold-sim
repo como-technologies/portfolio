@@ -26,13 +26,12 @@ Two clone sources:
       (COMO_GIT_BASE in the CALLER's environment overrides that base for
       the harness's own clone step only; children still run scrubbed).
 
-By default the sandbox holds NO playbook and NO ../docs evidence ledger —
-that IS the reviewer's world (neither is published, by policy). So ring
-3's demo-up is expected to stop at beat [1/6] with the documented
-named-knob notice; the actual notice text is asserted and the leg is
-recorded PASS-AS-DOCUMENTED. Any other demo-up failure is a real FAIL.
---with-playbook / --with-docs opt them in, cloned from the LOCAL siblings
-only (they have no public remote).
+The playbook is published (como-technologies/playbook, 2026-07-05), so
+the sandbox clones it like every other suite repo — a stranger's checkout
+has it now — and ring 3's demo-up must FULLY stand up; the old documented
+stop at beat [1/6] is a FAIL. The ../docs evidence ledger remains
+local-only by policy: absent by default, --with-docs opts it in from the
+LOCAL sibling. (--with-playbook is kept as a no-op for compatibility.)
 
 What the sandbox cannot simulate it records instead of faking: whether
 ollama is on PATH and whether the docker daemon is reachable are printed
@@ -74,8 +73,8 @@ SIBLINGS = REPO.parent  # sibling working copies live beside portfolio
 # Ring-1 order is deliberate: adroit first, so the later repos' adr-check
 # legs can find a freshly built sibling ../adroit inside the sandbox.
 APP_REPOS = ["adroit", "assessments", "conduit", "tuesday", "pulse"]
-SUITE = APP_REPOS + ["portfolio"]
-LOCAL_ONLY = ["playbook", "docs"]  # no public remote, by policy — opt-in, local source
+SUITE = APP_REPOS + ["portfolio", "playbook"]  # playbook published 2026-07-05
+LOCAL_ONLY = ["docs"]  # no public remote, by policy — opt-in, local source
 
 RING3_LEGS = ["preflight", "init-adroit", "demo-up", "demo-down"]
 RING3_CMDS = {
@@ -229,6 +228,8 @@ def run_leg(cmd: list[str], cwd: Path, log: Path, env: dict[str, str], timeout: 
 def run_ring1(sandbox: Path, logs: Path, env: dict[str, str], only: str | None) -> None:
     repos = [r for r in APP_REPOS if only is None or r == only]
     for name in repos:
+        if not (sandbox / name).is_dir():
+            continue  # its clone already recorded a ring-0 FAIL
         log = logs / f"ring1-{name}.log"
         print(f"ring 1: just ci in {name} ...")
         code = run_leg(["just", "ci"], sandbox / name, log, env, CI_TIMEOUT)
@@ -261,8 +262,11 @@ def classify_preflight(code: int | None, text: str, docker_ok: bool) -> str:
 def classify_demo_up(code: int | None, text: str, docker_ok: bool, with_playbook: bool) -> str:
     if code == 0:
         return "PASS"  # full stand-up (playbook resolved, forge up)
-    if not with_playbook and BEAT1_MARKER in text and PLAYBOOK_STOP in text:
-        return "PASS-AS-DOCUMENTED"  # the documented named-knob stop at [1/6]
+    if BEAT1_MARKER in text and PLAYBOOK_STOP in text:
+        # The playbook is published and the sandbox clones it; hitting the
+        # old [1/6] stop means resolution regressed. Real FAIL, no longer
+        # PASS-AS-DOCUMENTED.
+        return "FAIL"
     if not docker_ok:
         return "ENV-LIMITED"
     return "FAIL"
@@ -328,7 +332,8 @@ def parse_args() -> argparse.Namespace:
         choices=RING3_LEGS,
         help="limit ring 3 to these legs (repeatable; always run in runbook order)",
     )
-    p.add_argument("--with-playbook", action="store_true", help="clone the local playbook sibling in")
+    p.add_argument("--with-playbook", action="store_true",
+                   help="no-op (kept for compatibility: the published playbook is always cloned)")
     p.add_argument("--with-docs", action="store_true", help="clone the local docs ledger sibling in")
     p.add_argument("--soak", type=int, default=0, metavar="N", help="N extra conduit test-suite runs")
     return p.parse_args()
@@ -351,9 +356,7 @@ def main() -> int:
     ollama_ok, docker_ok = probe_env_facts(env)
 
     github_base = os.environ.get("COMO_GIT_BASE", "https://github.com/como-technologies").rstrip("/")
-    wanted = list(SUITE)
-    if args.with_playbook:
-        wanted.append("playbook")
+    wanted = list(SUITE)  # includes playbook (published; --with-playbook is a no-op)
     if args.with_docs:
         wanted.append("docs")
     for name in wanted:
@@ -365,7 +368,18 @@ def main() -> int:
         else:
             url = f"{github_base}/{name}.git"
         if not clone_repo(name, url, sandbox / name, env):
-            return 2
+            if name in ("portfolio", "conduit"):
+                print(f"ERROR: cannot clone {name} — rings 2/3 need it; aborting")
+                return 2
+            # A repo a stranger cannot fetch is a real red for that repo's
+            # legs (today: a private repo, no credentials) — record it and
+            # keep rehearsing the rest instead of aborting.
+            miss = logs / f"clone-{name}.log"
+            miss.write_text(
+                f"clone of {url} failed — unreachable from this environment"
+                " (private repo without credentials, or absent)\n"
+            )
+            record("0", f"clone-{name}", "FAIL", miss)
 
     ring2_result = "SKIPPED"
     if args.ring in (None, 1):

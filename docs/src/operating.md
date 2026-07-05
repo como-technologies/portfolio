@@ -35,17 +35,19 @@ that spin up throwaway git repos in their tests disable commit signing *in those
 disposable repos*, so a global `commit.gpgsign = true` (with no key for the
 throwaway identity) can't fail them.
 
-**Local-only by policy.** Two inputs are deliberately kept on the owner's
-machine and are not published; where either is absent the gate and the demo
-**skip or stop with a notice that names the knob**, never silently:
+**Sandbox-external inputs.** Two inputs resolve from outside a single
+checkout; where one is absent the gate and the demo **skip or stop with a
+notice that names the knob**, never silently:
 
 - the **run-evidence ledger** (`COMO_DOCS_DIR`, else a sibling `../docs`) that
   the per-run pages and `just refresh-evidence` read — so the run-evidence
   claims below verify only where the ledger is checked out;
 - the **playbook** corpus the Adopt demo seeds onto the throwaway forge (the
-  fictional client's decisions). Provide it with `COMO_PLAYBOOK_DIR`, a sibling
-  `../playbook`, or `COMO_GIT_BASE` / `COMO_PLAYBOOK_GIT` for the clone cache.
-  It has no public remote yet (see [Publishing](#publishing)).
+  fictional client's decisions). It is published at
+  [como-technologies/playbook](https://github.com/como-technologies/playbook),
+  so a sibling `../playbook` clone resolves it like any other suite repo;
+  `COMO_PLAYBOOK_DIR` and `COMO_GIT_BASE` / `COMO_PLAYBOOK_GIT` remain as
+  overrides.
 
 ## Ring 1 — each app on its own
 
@@ -141,12 +143,11 @@ portfolio/scripts/cold-sim --ring 3 --leg preflight   # stepwise: one ring, one 
   (a clone carries committed history only, never the dirty tree).
   `--from github` clones `https://github.com/como-technologies/<repo>`
   instead — the published reality.
-- The sandbox deliberately holds **no playbook and no `../docs` ledger**
-  (the cold reviewer's world, per the local-only policy above): ring 3's
-  `demo-up` is expected to stop at beat `[1/6]` with the named-knob notice,
-  which the harness asserts verbatim and records as `PASS-AS-DOCUMENTED` —
-  any other failure is a real `FAIL`. `--with-playbook` / `--with-docs` opt
-  them in from the local siblings.
+- The sandbox clones the **playbook** like every other suite repo (it is
+  published), so ring 3's `demo-up` must fully stand up — the old documented
+  stop at beat `[1/6]` is now a real `FAIL`. Only the `../docs` ledger stays
+  out by default (local-only by policy); `--with-docs` opts it in from the
+  local sibling.
 - What it cannot simulate it records instead of faking: ollama-on-PATH and
   docker-daemon reachability are printed as env facts, and a down daemon
   degrades the docker-dependent ring-3 legs to `ENV-LIMITED` — preflight
@@ -177,12 +178,12 @@ owner-side work — is a deliberate set of owner actions, kept out of the loop's
 automation; the current per-repo procedure lives in the workspace ledger at
 `docs/iteration-4/owner-actions.md`.
 
-One of those actions is already done: the pinned adroit rev in
-`conduit/adroit.rev` and the `v0.2.0` tag are reachable on the adroit remote,
-so a cold checkout's `init-adroit` resolves the pin with no sibling. One
-owner action remains to remove the last local-only edge, so a cold public
-checkout runs the demo with no overrides:
-
-- **Publish the playbook** corpus to a remote (or set `COMO_GIT_BASE` so the
-  clone leg resolves it). Until then the demo needs `COMO_PLAYBOOK_DIR` or a
-  sibling `../playbook`.
+The formerly outstanding actions are done: the pinned adroit rev in
+`conduit/adroit.rev` resolves from the adroit remote, and the **playbook is
+published** at
+[como-technologies/playbook](https://github.com/como-technologies/playbook)
+(2026-07-05, a fresh-history cut of the template — its content gate ships a
+generic example term list; a real engagement list stays in a gitignored
+local file). A cold checkout that clones the suite side by side now runs
+the demo with no overrides. The only remaining local-only input is the
+`../docs` run-evidence ledger, by policy.
