@@ -121,6 +121,42 @@ recomputes the two ollama lanes for real (timings in the [customer demo](https:/
 kit's narrated page). Deeper conformance is env-gated: `CONDUIT_E2E_GITEA=1`
 (live forge), `CONDUIT_E2E_ADROIT=1`, `CONDUIT_E2E_GITHUB=1`.
 
+## The pre-review cold gate — `scripts/cold-sim`
+
+The three rings above are what a cold reviewer runs; `scripts/cold-sim` (in
+this repo) rehearses exactly that before a review, as one command. It clones
+the suite side by side into a fresh sandbox and runs the runbook verbatim
+under a contributor-default environment a warm workspace never exercises: a
+hostile global git config (`commit.gpgsign = true` with a throwaway
+identity, `/dev/null` system config) and every `COMO_*` knob scrubbed from
+the child environment.
+
+```sh
+portfolio/scripts/cold-sim                            # all three rings, fresh /tmp sandbox
+portfolio/scripts/cold-sim --ring 3 --leg preflight   # stepwise: one ring, one leg
+```
+
+- `--from local` (default) clones each repo from its sibling working copy
+  via `file://` — the future *pushed* state of any unpushed local commits
+  (a clone carries committed history only, never the dirty tree).
+  `--from github` clones `https://github.com/como-technologies/<repo>`
+  instead — the published reality.
+- The sandbox deliberately holds **no playbook and no `../docs` ledger**
+  (the cold reviewer's world, per the local-only policy above): ring 3's
+  `demo-up` is expected to stop at beat `[1/6]` with the named-knob notice,
+  which the harness asserts verbatim and records as `PASS-AS-DOCUMENTED` —
+  any other failure is a real `FAIL`. `--with-playbook` / `--with-docs` opt
+  them in from the local siblings.
+- What it cannot simulate it records instead of faking: ollama-on-PATH and
+  docker-daemon reachability are printed as env facts, and a down daemon
+  degrades the docker-dependent ring-3 legs to `ENV-LIMITED` — preflight
+  still runs regardless, because its honest reporting is part of the check.
+- Per-leg logs land under `<sandbox>/logs/`, the last output line is one
+  JSON result object for tooling, and the exit is nonzero only on a `FAIL`.
+  Stepwise runs (`--ring`, `--repo`, `--leg`, `--soak N`) reuse a `--dir`
+  sandbox. The caller's cargo registry cache is reused — fresh clones
+  already force cold `target/` builds.
+
 ## The validation record
 
 The loop has been run end to end three times, with every seam machine-checked
