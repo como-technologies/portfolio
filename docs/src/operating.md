@@ -12,8 +12,8 @@ env override, else a sibling checkout `../<repo>`, else a pinned git clone into
 a gitignored cache. The simplest layout is all repos checked out under one
 parent (`assessments`, `adroit`, `conduit`, `tuesday`, `pulse`, `playbook`,
 `portfolio`) — then everything resolves with no configuration. Each app's ADR
-corpus ships **inside its own published mdbook source** (`docs/src/adr/`, or
-`book/src/adr/` for assessments), so the truthfulness gate in Ring 2 finds it in
+corpus ships **inside its own published mdbook source** at the suite's uniform
+`docs/src/adr/` path, so the truthfulness gate in Ring 2 finds it in
 any checkout — no separate corpus download.
 
 **Toolchain.** A Rust toolchain with `cargo`, `just`, and `mdbook`; `git`;
@@ -52,12 +52,25 @@ machine and are not published; where either is absent the gate and the demo
 Run the house gate in each repo:
 
 ```sh
-just ci      # fmt + clippy + tests + book build + adr-check (every repo)
+just ci      # fmt + clippy + tests + book build + ADR-corpus check, per repo
 ```
 
-Green in all of them means each app is internally sound — formatted, lint-clean,
-tested, its mdbook builds, and its ADR corpus validates. This is the per-app
-truth check and the fastest signal.
+Every repo's gate validates its ADR corpus: the five Rust apps each carry an
+`adr-check` leg in `just ci`, and the playbook — a corpus, not a Rust app —
+gates its content scan, corpus/index validation (`check`), and book build
+instead of code legs. Green in all of them means each app is internally
+sound — the Rust apps formatted, lint-clean, and tested; every mdbook builds;
+every corpus validates. This is the per-app truth check and the fastest
+signal.
+
+The Rust repos also gate dependency advisories with `cargo audit` — a
+`crate-audit` leg in `just ci` (conduit runs it as a dedicated CI job
+instead). A red audit on a cold checkout is not automatically a code
+failure: a freshly published advisory reddens an unchanged tree. Accepted
+advisories live in each repo's `.cargo/audit.toml` as dated, documented
+ignores (what was accepted, why, and the removal trigger), so a new red is
+a decision to make — update the dependency or record the acceptance there —
+never a reason to bypass the gate.
 
 ## Ring 2 — does the suite still cohere
 
@@ -95,9 +108,9 @@ demo/kit/demo-down               # destroys the forge; leaves nothing
 ```
 
 `init-adroit` resolves the pinned adroit by the suite convention — the adroit
-remote at the pinned rev, else a sibling `../adroit` (its HEAD, with a loud
-local-dev notice, when that checkout doesn't carry the exact pin because it
-hasn't been pushed yet). `demo-up` resolves the playbook and the sibling
+remote at the pinned rev (reachable there today), else a sibling `../adroit`
+when the remote is unreachable (its HEAD, with a loud local-dev notice, if
+that checkout lacks the exact pin). `demo-up` resolves the playbook and the sibling
 binaries the same way and seeds the throwaway forge; it stops early with named
 knobs if Docker isn't up or no playbook resolves (run `preflight` first).
 
@@ -128,12 +141,12 @@ owner-side work — is a deliberate set of owner actions, kept out of the loop's
 automation; the current per-repo procedure lives in the workspace ledger at
 `docs/iteration-4/owner-actions.md`.
 
-Two of those owner actions remove the last local-only edges so a cold public
+One of those actions is already done: the pinned adroit rev in
+`conduit/adroit.rev` and the `v0.2.0` tag are reachable on the adroit remote,
+so a cold checkout's `init-adroit` resolves the pin with no sibling. One
+owner action remains to remove the last local-only edge, so a cold public
 checkout runs the demo with no overrides:
 
-- **Push the pinned adroit rev** (`conduit/adroit.rev`) — push the commit and
-  its `v0.2.0` tag to the adroit remote. Until then `init-adroit` falls back to
-  a sibling `../adroit` (HEAD, local-dev only).
 - **Publish the playbook** corpus to a remote (or set `COMO_GIT_BASE` so the
   clone leg resolves it). Until then the demo needs `COMO_PLAYBOOK_DIR` or a
   sibling `../playbook`.
