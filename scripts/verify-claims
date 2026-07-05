@@ -83,11 +83,11 @@ CACHE = REPO / ".como" / "deps"
 # public remote yet, so its clone leg degrades to skip-with-notice (a present
 # ../playbook sibling resolves it for local-dev / the demo).
 PINS = {
-    "conduit": "e6aa1d283b974ee07cea54080561e723f7ed1ba6",
-    "adroit": "cc4375499059ee42b8e8fdba43c88c7ee9ab712d",
-    "tuesday": "b6b8d6e5af0c753e359309712ff7c7b2e53648ef",
-    "assessments": "1ce889ba4547f19bba26029a5c638052a08440a1",
-    "pulse": "332a33afaaffed38f4194014819740945ad761cd",
+    "conduit": "6dae385fd2b0cf1254139c9af35cd542d2aaad2c",
+    "adroit": "683049bb7f3d48c55cfe96daceab38a448b4ec9f",
+    "tuesday": "2f478807fefc16a107bf43acd9dd7ce5d6b23417",
+    "assessments": "9b05ae4859f28281309961cb059ba0d288b0c48c",
+    "pulse": "f3022b4e25c0f0242202e472ae29df4d778d4f87",
     "playbook": "30ab2da6410e5e6d3d8eeb3b709c23654a23a4d2",  # no remote yet
 }
 
