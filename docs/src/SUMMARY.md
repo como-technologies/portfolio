@@ -3,6 +3,7 @@
 [Introduction](./introduction.md)
 [Roadmap](./roadmap.md)
 [Operating the suite](./operating.md)
+[The Como KB specification](./kb-spec.md)
 
 # The Loop
 
