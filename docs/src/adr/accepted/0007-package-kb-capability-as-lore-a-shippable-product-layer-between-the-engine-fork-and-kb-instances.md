@@ -1,4 +1,4 @@
-# ADR-0006: Package KB capability as lore, a shippable product layer between the engine fork and KB instances
+# ADR-0007: Package KB capability as lore, a shippable product layer between the engine fork and KB instances
 
 > State: Accepted
 
@@ -15,7 +15,7 @@ instances that lore provisions); clients (lore is how a KB reaches them).
 
 ## Context and Problem Statement
 
-[ADR-0005](./0005-adopt-llm-wiki-engine-como-fork-as-the-knowledge-base-substrate.md)
+[ADR-0006](./0006-adopt-llm-wiki-engine-como-fork-as-the-knowledge-base-substrate.md)
 adopted the Como fork of `llm-wiki-engine` as the KB substrate and sketched
 "three layers, three homes": fork, KB repo, heads — with provisioning
 (engine install, hooks, weights, schema registration) living inside the KB
@@ -32,7 +32,7 @@ either the engine fork (polluting it) or a data repo (burying them).
   a KB capability should be sellable ("KBs for anyone, including us"), with
   client-facing concerns (packaging, deployment, audit/compliance) owned by
   a product, not scattered across instance repos.
-- The fork's purity rule (ADR-0005): only generic, upstreamable engine work
+- The fork's purity rule (ADR-0006): only generic, upstreamable engine work
   lives in the fork. Como-specific code and config need a home that isn't
   the fork.
 - One place to pin: instances and clients need a known-good engine version;
@@ -42,7 +42,7 @@ either the engine fork (polluting it) or a data repo (burying them).
 
 ## Considered Options
 
-1. **Provisioning scripts inside each KB repo** (ADR-0005's sketch) — every
+1. **Provisioning scripts inside each KB repo** (ADR-0006's sketch) — every
    instance carries kb-setup-style tooling and its own schema copies.
 2. **lore: a product layer between the fork and instances** — a portfolio
    member that depends on the fork and creates/manages/configures KBs.
@@ -73,7 +73,7 @@ architecture becomes four layers:
    writers and seam readers against instances, per the KB spec.
 
 Option 1 makes N copies of tooling and zero products. Option 3 destroys the
-fork's upstream optionality and violates ADR-0005's own purity rule. The
+fork's upstream optionality and violates ADR-0006's own purity rule. The
 product layer is where a distribution belongs — the same pattern as
 upstream → distro → installs.
 
@@ -95,7 +95,7 @@ upstream → distro → installs.
 
 ## Implementation
 
-Refines the "three layers, three homes" consequence of ADR-0005 (the
+Refines the "three layers, three homes" consequence of ADR-0006 (the
 substrate decision there is unchanged). The KB spec's architecture section
 (`docs/src/kb-spec.md` §8) is updated to the four layers; lore's creation is
 tracked in portfolio#5 (product) with Como's own instance as a follow-on

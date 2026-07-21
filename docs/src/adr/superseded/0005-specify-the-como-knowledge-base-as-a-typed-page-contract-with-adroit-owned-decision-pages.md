@@ -1,10 +1,10 @@
 # ADR-0005: Specify the Como knowledge base as a typed-page contract, with adroit-owned decision pages
 
-> State: Proposed
+> State: Superseded
 
 ## Status
 
-Proposed
+Superseded by [ADR-0006](../accepted/0006-adopt-llm-wiki-engine-como-fork-as-the-knowledge-base-substrate.md) — the follow-on decision this record itself scheduled ("revisit \[adapt\] once the spec is stable"; "forkable as plan B"). The spec stabilized, the fork was built and dogfooded, and each disqualifier here was retired with live evidence (status enum via a custom `decision` type; link identity via stable ULIDs; fork maintenance disproven — six defects fixed same-day). Two findings from this spike carry forward: the adroit unknown-key destruction (now [adroit#28](https://github.com/como-technologies/adroit/issues/28), blocking) and the conduit read-seam green run (evidence: [KB substrate spike](../../spikes/kb-substrate.md)).
 
 ## Stakeholders
 

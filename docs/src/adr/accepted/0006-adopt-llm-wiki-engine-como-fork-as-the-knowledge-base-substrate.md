@@ -1,4 +1,4 @@
-# ADR-0005: Adopt llm-wiki-engine (Como fork) as the knowledge-base substrate
+# ADR-0006: Adopt llm-wiki-engine (Como fork) as the knowledge-base substrate
 
 > State: Accepted
 
@@ -82,6 +82,22 @@ deliberately **generic engine improvements only** (stable ids, fail-loud
 registry, split confidence semantics, citations, cursors) — nothing
 Como-specific lives in the engine, which is what keeps it replaceable behind
 the spec and upstreamable if engagement ever resumes.
+
+### Supersedes ADR-0005 (spec-only entry)
+
+An earlier bounded spike ([evidence](../../spikes/kb-substrate.md)) reached
+[ADR-0005](../superseded/0005-specify-the-como-knowledge-base-as-a-typed-page-contract-with-adroit-owned-decision-pages.md):
+spec-only, no substrate dependency — the right call against stock 0.4.1
+before the spec existed, and its own text scheduled this revisit. Its
+disqualifiers are each retired above; two of its findings carry forward:
+
+- **adroit's write path silently destroys unknown frontmatter keys**
+  ([adroit#28](https://github.com/como-technologies/adroit/issues/28)) —
+  until fixed, `docs/src/adr` remains the sole adroit-writable home of
+  decisions and any KB-resident copy is read-only projection. This gates
+  the corpus port, not this decision.
+- **conduit's frozen read slice ran green over a KB-resident corpus** —
+  complementary evidence for the read-seam contract (§ read contract).
 
 ### Consequences
 
