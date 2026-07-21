@@ -5,8 +5,10 @@ identity, mechanical anti-rot, and a git-native admission model. Produced by
 the [kb-spike](https://github.com/como-technologies/kb-spike) evaluation
 (ten findings, each closed with live-verified evidence) and adopted by
 [ADR-0006](./adr/accepted/0006-adopt-llm-wiki-engine-como-fork-as-the-knowledge-base-substrate.md).
-Substrate: [`llm-wiki-engine`, Como fork](https://github.com/como-technologies/llm-wiki)
-(`como-main`). This chapter is the spec's interim home — once the production
+Substrate: [`llm-wiki`](https://github.com/como-technologies/llm-wiki) — the Como
+KB product ([ADR-0008](./adr/accepted/0008-build-the-kb-product-in-the-fork-itself-developing-on-main.md)):
+a fork of `llm-wiki-engine` developed on `main`, pinned by release tag
+(first: `v0.5.0`). This chapter is the spec's interim home — once the production
 KB exists, the spec migrates into it as typed pages and this page becomes a
 projection.
 
@@ -101,7 +103,7 @@ Each contract cites its evidence in the spike's
   (`decisions/adr-NNNN`, status in frontmatter only) — a naming convention,
   not a load-bearing constraint.
 - Normative text: the fork's
-  [`page-identity.md`](https://github.com/como-technologies/llm-wiki/blob/feat/stable-page-identity/docs/specifications/model/page-identity.md).
+  [`page-identity.md`](https://github.com/como-technologies/llm-wiki/blob/main/docs/specifications/model/page-identity.md).
   Evidence: findings/issue-01.
 
 ### 2. Page types & schemas
@@ -191,28 +193,25 @@ Each contract cites its evidence in the spike's
 - Evidence: findings/issue-09 (including the hand-walked capture → cite →
   page round trip, with pinned resolution surviving reorganization).
 
-### 8. Architecture: four layers
-([ADR-0007](./adr/accepted/0007-package-kb-capability-as-lore-a-shippable-product-layer-between-the-engine-fork-and-kb-instances.md))
+### 8. Architecture: three layers
+([ADR-0008](./adr/accepted/0008-build-the-kb-product-in-the-fork-itself-developing-on-main.md))
 
-- **The fork** (`como-technologies/llm-wiki`, `como-main`): the generic
-  engine — upstream plus an upstreamable patch series;
-  `feat/stable-page-identity` stays the clean upstream-PR candidate.
-  Nothing Como-specific enters the engine.
-- **lore** (`como-technologies/lore`, portfolio#5): the Como KB **product**.
-  Extends the engine **by dependency, never by patching** (the `llm_wiki`
-  library + CLI); owns the Como schema library (starting with `decision`),
-  provisioning (pinned engine install, strict validation, hooks, search
-  weights), and the ops surface — packaging, deployment, shipping to
-  clients, audit/compliance. **Engine pinning happens in lore**; the fork
-  stays a moving tip. Routing rule: generic → fork; Como-shaped → lore.
-- **KB instances**: near-pure data spaces (`wiki/`, `evidence/`,
-  `schemas/` as installed) created, deployed, and managed *with* lore.
-  Como's own KB is the first instance — the product's permanent dogfood.
+- **`llm-wiki`** (`como-technologies/llm-wiki`): the Como KB product — engine,
+  Como schema library (starting with `decision`), provisioning (hooks, strict
+  defaults, search weights), and ops, all developed on `main`, the only
+  branch. **Pinning = release tags** (`v0.5.0` is the first); an upgrade is a
+  tag bump. The `upstream` remote exists for opportunistic cherry-picks; no
+  discipline is owed to it. The spec's substrate-neutral contracts (above)
+  are what keep the KB replaceable — not repo topology.
+- **KB instances**: near-pure data spaces (`wiki/`, `evidence/`, `schemas/`
+  as installed) created and managed by `llm-wiki`. Como's own KB is the
+  first instance — the product's permanent dogfood.
 - **The heads**: adroit, tuesday, pulse, and the librarian. Structured
   writers in; seam readers out — always against instances, via the seams.
 
-Open engine work:
-[llm-wiki#8–#13](https://github.com/como-technologies/llm-wiki/issues).
-Future work (absorbed into
-[portfolio#5](https://github.com/como-technologies/portfolio/issues/5)):
-append-only enforcement + replay; snapshot-based index sync.
+Open product work:
+[llm-wiki issues](https://github.com/como-technologies/llm-wiki/issues).
+Future work (tracked in
+[portfolio#6](https://github.com/como-technologies/portfolio/issues/6) and
+the llm-wiki backlog): append-only enforcement + replay; snapshot-based
+index sync.

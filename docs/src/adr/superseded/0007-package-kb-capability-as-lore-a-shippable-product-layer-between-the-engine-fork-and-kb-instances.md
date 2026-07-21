@@ -1,10 +1,10 @@
 # ADR-0007: Package KB capability as lore, a shippable product layer between the engine fork and KB instances
 
-> State: Accepted
+> State: Superseded
 
 ## Status
 
-Accepted
+Superseded by [ADR-0008](../accepted/0008-build-the-kb-product-in-the-fork-itself-developing-on-main.md) — reversed before any lore code existed: the fork itself is the product, developed on `main`, with release tags as the pinning story. The four-layer split and the generic-vs-Como routing rule are retired with it.
 
 ## Stakeholders
 
@@ -15,7 +15,7 @@ instances that lore provisions); clients (lore is how a KB reaches them).
 
 ## Context and Problem Statement
 
-[ADR-0006](./0006-adopt-llm-wiki-engine-como-fork-as-the-knowledge-base-substrate.md)
+[ADR-0006](../accepted/0006-adopt-llm-wiki-engine-como-fork-as-the-knowledge-base-substrate.md)
 adopted the Como fork of `llm-wiki-engine` as the KB substrate and sketched
 "three layers, three homes": fork, KB repo, heads — with provisioning
 (engine install, hooks, weights, schema registration) living inside the KB
