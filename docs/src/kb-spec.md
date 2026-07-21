@@ -191,21 +191,28 @@ Each contract cites its evidence in the spike's
 - Evidence: findings/issue-09 (including the hand-walked capture → cite →
   page round trip, with pinned resolution surviving reorganization).
 
-### 8. Architecture: three layers, three homes
+### 8. Architecture: four layers
+([ADR-0006](./adr/accepted/0006-package-kb-capability-as-lore-a-shippable-product-layer-between-the-engine-fork-and-kb-instances.md))
 
-- **The fork** (`como-technologies/llm-wiki`): an engine carrying a generic
-  patch series (`como-main`); `feat/stable-page-identity` stays the clean
-  upstream-PR candidate. Nothing Como-specific enters the engine.
-- **The KB repo** (to be created): the production space — `wiki/`,
-  `evidence/`, `schemas/`, hooks, weights, librarian policy — provisioned
-  by a kb-setup descendant installing the engine from the fork.
+- **The fork** (`como-technologies/llm-wiki`, `como-main`): the generic
+  engine — upstream plus an upstreamable patch series;
+  `feat/stable-page-identity` stays the clean upstream-PR candidate.
+  Nothing Como-specific enters the engine.
+- **lore** (`como-technologies/lore`, portfolio#5): the Como KB **product**.
+  Extends the engine **by dependency, never by patching** (the `llm_wiki`
+  library + CLI); owns the Como schema library (starting with `decision`),
+  provisioning (pinned engine install, strict validation, hooks, search
+  weights), and the ops surface — packaging, deployment, shipping to
+  clients, audit/compliance. **Engine pinning happens in lore**; the fork
+  stays a moving tip. Routing rule: generic → fork; Como-shaped → lore.
+- **KB instances**: near-pure data spaces (`wiki/`, `evidence/`,
+  `schemas/` as installed) created, deployed, and managed *with* lore.
+  Como's own KB is the first instance — the product's permanent dogfood.
 - **The heads**: adroit, tuesday, pulse, and the librarian. Structured
-  writers in; seam readers out.
+  writers in; seam readers out — always against instances, via the seams.
 
 Open engine work:
 [llm-wiki#8–#13](https://github.com/como-technologies/llm-wiki/issues).
-Future work:
-[kb-spike#11](https://github.com/como-technologies/kb-spike/issues/11)
-(append-only enforcement + replay),
-[kb-spike#12](https://github.com/como-technologies/kb-spike/issues/12)
-(snapshot-based index sync).
+Future work (absorbed into
+[portfolio#5](https://github.com/como-technologies/portfolio/issues/5)):
+append-only enforcement + replay; snapshot-based index sync.
