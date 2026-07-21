@@ -1,0 +1,431 @@
+#!/usr/bin/env python3
+"""cold-sim — the pre-review cold-checkout gate (the external reviewer's
+methodology, made repeatable).
+
+Reproduces what a cold reviewer actually does to this suite: clone every
+repo cold, side by side under one parent, in a contributor-default
+environment — global commit signing ON with a throwaway identity, none of
+the suite's COMO_* knobs set — and run the three-ring runbook from
+docs/src/operating.md VERBATIM:
+
+  Ring 1   `just ci` in each of the five app repos
+           (adroit, assessments, conduit, tuesday, pulse)
+  Ring 2   `just ci` in portfolio — verify-claims resolves the sandbox
+           siblings; its summary line is captured into the report
+  Ring 3   in the conduit clone: demo/kit/preflight, `just init-adroit`,
+           demo/kit/demo-up, demo/kit/demo-down
+
+Two clone sources:
+
+  --from local (default)  each repo cloned from its sibling working copy
+      beside this one via file:// — i.e. the FUTURE pushed state of any
+      unpushed local commits (a clone carries committed history only,
+      never the dirty tree). `main` is asked for explicitly; a repo
+      without one falls back to its default HEAD with a printed notice.
+  --from github           https://github.com/como-technologies/<repo>
+      (COMO_GIT_BASE in the CALLER's environment overrides that base for
+      the harness's own clone step only; children still run scrubbed).
+
+The playbook is published (como-technologies/playbook, 2026-07-05), so
+the sandbox clones it like every other suite repo — a stranger's checkout
+has it now — and ring 3's demo-up must FULLY stand up; the old documented
+stop at beat [1/6] is a FAIL. The ../docs evidence ledger remains
+local-only by policy: absent by default, --with-docs opts it in from the
+LOCAL sibling. (--with-playbook is kept as a no-op for compatibility.)
+
+What the sandbox cannot simulate it records instead of faking: whether
+ollama is on PATH and whether the docker daemon is reachable are printed
+as env-fact lines, and when the daemon is down the docker-dependent
+ring-3 legs are recorded ENV-LIMITED, never silently green — though
+preflight still runs regardless, because its honest reporting (a nonzero
+exit and the PREFLIGHT INCOMPLETE banner) is itself part of the check.
+
+Deliberately NOT simulated: a cold cargo registry. Fresh clones already
+force cold target/ builds; the caller's CARGO_HOME (registry cache) is
+reused, because re-downloading crates proves nothing about this suite.
+
+Results: PASS / FAIL / PASS-AS-DOCUMENTED / ENV-LIMITED, one row per leg
+in the summary table with its log under <sandbox>/logs/. Exit 0 unless
+something is unexpectedly red (any FAIL). The last line of output is one
+machine-readable JSON object {"ring1": {...}, "ring2": "...", "ring3":
+{...}} for tooling.
+
+Usage:
+  scripts/cold-sim                          # all three rings, fresh /tmp sandbox
+  scripts/cold-sim --ring 1 --repo conduit  # one repo's ring-1 gate
+  scripts/cold-sim --ring 3 --leg preflight --leg demo-up --dir /tmp/cs1
+  scripts/cold-sim --soak 5                 # + 5 extra conduit test-suite runs
+"""
+
+import argparse
+import json
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent  # the portfolio repo root
+SIBLINGS = REPO.parent  # sibling working copies live beside portfolio
+
+# Ring-1 order is deliberate: adroit first, so the later repos' adr-check
+# legs can find a freshly built sibling ../adroit inside the sandbox.
+APP_REPOS = ["adroit", "assessments", "conduit", "tuesday", "pulse"]
+SUITE = APP_REPOS + ["portfolio", "playbook"]  # playbook published 2026-07-05
+LOCAL_ONLY = ["docs"]  # no public remote, by policy — opt-in, local source
+
+RING3_LEGS = ["preflight", "init-adroit", "demo-up", "demo-down"]
+RING3_CMDS = {
+    "preflight": ["demo/kit/preflight"],
+    "init-adroit": ["just", "init-adroit"],
+    "demo-up": ["demo/kit/demo-up"],
+    "demo-down": ["demo/kit/demo-down"],
+}
+LEG_TIMEOUT = {"preflight": 600, "init-adroit": 3600, "demo-up": 3600, "demo-down": 600}
+CI_TIMEOUT = 3600  # per `just ci` leg — cold builds are slow, hangs are red
+SOAK_TIMEOUT = 1800
+
+# The documented ring-3 stop in a no-playbook sandbox, pinned to the kit's
+# ACTUAL text (conduit demo/kit/demo-up step [1/6] + lib.sh require_repo).
+# If conduit rewords the notice, this assertion goes red — update both
+# together, exactly like a verify-claims pin.
+BEAT1_MARKER = "[1/6] resolving cross-repo dependencies"
+PLAYBOOK_STOP = (
+    "playbook is required for this beat. Provide COMO_PLAYBOOK_DIR,"
+    " a sibling ../playbook checkout, or COMO_GIT_BASE for the clone cache."
+)
+PREFLIGHT_OK = "PREFLIGHT OK"
+PREFLIGHT_INCOMPLETE = "PREFLIGHT INCOMPLETE"
+
+# The hostile contributor-default global git config (GIT_CONFIG_GLOBAL).
+# Commit signing ON with no usable key: any suite test that creates commits
+# in a throwaway repo without disabling signing there goes red under it —
+# exactly the reviewer-machine failure mode the runbook promises against.
+GITCONFIG = """\
+# cold-sim: hostile contributor-default git config — signing on, no key.
+[user]
+\tname = Cold Sim Reviewer
+\temail = cold-sim@invalid.example
+[commit]
+\tgpgsign = true
+"""
+
+results: list[dict] = []  # {ring, name, result, log}
+
+
+def record(ring: str, name: str, result: str, log: Path) -> None:
+    results.append({"ring": ring, "name": name, "result": result, "log": log})
+    print(f"result: ring {ring} {name}: {result} (log {log})")
+
+
+def _git(args: list[str], cwd: Path) -> str | None:
+    try:
+        proc = subprocess.run(
+            ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=120
+        )
+    except OSError:
+        return None
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
+def hostile_env(sandbox: Path) -> dict[str, str]:
+    """The contributor-default child environment: every COMO_* knob (and
+    the portfolio justfile's ADROIT_BIN escape hatch) scrubbed, git config
+    pinned to the sandbox's hostile global + no system config. Everything
+    else — PATH, the toolchain, CARGO_HOME — passes through untouched."""
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("COMO_") and k != "ADROIT_BIN"
+    }
+    env["GIT_CONFIG_GLOBAL"] = str(sandbox / "gitconfig")
+    env["GIT_CONFIG_SYSTEM"] = "/dev/null"
+    return env
+
+
+def probe_env_facts(env: dict[str, str]) -> tuple[bool, bool]:
+    """Environment facts the sandbox cannot simulate — recorded, not faked."""
+    ollama = shutil.which("ollama", path=env.get("PATH")) is not None
+    try:
+        docker = (
+            subprocess.run(
+                ["docker", "info"], env=env, capture_output=True, timeout=30
+            ).returncode
+            == 0
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        docker = False
+    print(f"env-fact: ollama on PATH: {'yes' if ollama else 'no'}")
+    print(
+        f"env-fact: docker daemon reachable: {'yes' if docker else 'no'}"
+        + ("" if docker else " (docker-dependent ring-3 legs record ENV-LIMITED)")
+    )
+    return ollama, docker
+
+
+def clone_repo(name: str, url: str, dest: Path, env: dict[str, str]) -> bool:
+    """Clone `main` explicitly (the state a push would publish); fall back
+    to the source's default HEAD with a notice. An existing sandbox clone
+    is reused as-is so stepwise --ring runs share one cold checkout."""
+    if dest.is_dir():
+        print(f"reuse: {name} already in the sandbox{_at(dest)}")
+        return True
+    for extra in (["--branch", "main"], []):
+        try:
+            proc = subprocess.run(
+                ["git", "clone", "--quiet", *extra, url, str(dest)],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=1800,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            proc = None
+        if proc is not None and proc.returncode == 0:
+            if not extra:
+                print(f"notice: {name} has no main branch at {url} — using its default HEAD")
+            print(f"clone: {name} <- {url}{_at(dest)}")
+            return True
+        shutil.rmtree(dest, ignore_errors=True)  # no half-populated clone
+    print(f"ERROR: could not clone {name} from {url}")
+    return False
+
+
+def _at(dest: Path) -> str:
+    branch = _git(["rev-parse", "--abbrev-ref", "HEAD"], dest) or "?"
+    sha = _git(["rev-parse", "--short", "HEAD"], dest) or "?"
+    return f" (branch {branch} @ {sha})"
+
+
+def run_leg(cmd: list[str], cwd: Path, log: Path, env: dict[str, str], timeout: int) -> int | None:
+    """Run one runbook command with combined output to `log`; the exit
+    code, or None on timeout / failure to execute (both red)."""
+    log.parent.mkdir(parents=True, exist_ok=True)
+    with log.open("w") as fh:
+        fh.write(f"$ {' '.join(cmd)}   (cwd {cwd})\n")
+        fh.flush()
+        try:
+            code = subprocess.run(
+                cmd, cwd=cwd, env=env, stdout=fh, stderr=subprocess.STDOUT, timeout=timeout
+            ).returncode
+        except subprocess.TimeoutExpired:
+            fh.write(f"\ncold-sim: TIMEOUT after {timeout}s\n")
+            code = None
+        except OSError as exc:
+            fh.write(f"\ncold-sim: could not execute: {exc}\n")
+            code = None
+        fh.write(f"\ncold-sim: exit {code}\n")
+    return code
+
+
+# ---------------------------------------------------------------------------
+# The three rings — the operating.md runbook, verbatim
+# ---------------------------------------------------------------------------
+
+
+def run_ring1(sandbox: Path, logs: Path, env: dict[str, str], only: str | None) -> None:
+    repos = [r for r in APP_REPOS if only is None or r == only]
+    for name in repos:
+        if not (sandbox / name).is_dir():
+            continue  # its clone already recorded a ring-0 FAIL
+        log = logs / f"ring1-{name}.log"
+        print(f"ring 1: just ci in {name} ...")
+        code = run_leg(["just", "ci"], sandbox / name, log, env, CI_TIMEOUT)
+        record("1", name, "PASS" if code == 0 else "FAIL", log)
+
+
+def run_ring2(sandbox: Path, logs: Path, env: dict[str, str]) -> str:
+    log = logs / "ring2-portfolio.log"
+    print("ring 2: just ci in portfolio (verify-claims resolves the sandbox siblings) ...")
+    code = run_leg(["just", "ci"], sandbox / "portfolio", log, env, CI_TIMEOUT)
+    text = log.read_text(errors="replace")
+    m = re.search(r"^verify-claims: \d+ passed, \d+ skipped, \d+ failed$", text, re.M)
+    summary = m.group(0) if m else "verify-claims summary line NOT FOUND"
+    result = "PASS" if code == 0 and m else "FAIL"
+    record("2", "portfolio", result, log)
+    print(f"ring 2: {summary}")
+    return f"{result} ({summary})"
+
+
+def classify_preflight(code: int | None, text: str, docker_ok: bool) -> str:
+    if docker_ok:
+        return "PASS" if code == 0 and PREFLIGHT_OK in text else "FAIL"
+    # Daemon down: preflight must exit nonzero AND say so — a green exit
+    # against a dead daemon would be the dishonesty this gate exists to catch.
+    if code == 1 and PREFLIGHT_INCOMPLETE in text:
+        return "ENV-LIMITED"
+    return "FAIL"
+
+
+def classify_demo_up(code: int | None, text: str, docker_ok: bool, with_playbook: bool) -> str:
+    if code == 0:
+        return "PASS"  # full stand-up (playbook resolved, forge up)
+    if BEAT1_MARKER in text and PLAYBOOK_STOP in text:
+        # The playbook is published and the sandbox clones it; hitting the
+        # old [1/6] stop means resolution regressed. Real FAIL, no longer
+        # PASS-AS-DOCUMENTED.
+        return "FAIL"
+    if not docker_ok:
+        return "ENV-LIMITED"
+    return "FAIL"
+
+
+def run_ring3(
+    sandbox: Path,
+    logs: Path,
+    env: dict[str, str],
+    legs: list[str],
+    docker_ok: bool,
+    with_playbook: bool,
+) -> None:
+    conduit = sandbox / "conduit"
+    for leg in RING3_LEGS:
+        if leg not in legs:
+            continue
+        log = logs / f"ring3-{leg}.log"
+        print(f"ring 3: {' '.join(RING3_CMDS[leg])} in the conduit clone ...")
+        code = run_leg(RING3_CMDS[leg], conduit, log, env, LEG_TIMEOUT[leg])
+        text = log.read_text(errors="replace")
+        if leg == "preflight":
+            result = classify_preflight(code, text, docker_ok)
+        elif leg == "demo-up":
+            result = classify_demo_up(code, text, docker_ok, with_playbook)
+        elif code == 0:
+            result = "PASS"
+        else:
+            # init-adroit needs no docker; demo-down does (forge teardown).
+            result = "ENV-LIMITED" if leg == "demo-down" and not docker_ok else "FAIL"
+        record("3", leg, result, log)
+
+
+def run_soak(sandbox: Path, logs: Path, env: dict[str, str], n: int) -> str:
+    """N additional runs of conduit's test suite in the sandbox clone —
+    confidence against rare races (the ETXTBSY class) a single cold run
+    can miss."""
+    red = 0
+    for i in range(1, n + 1):
+        log = logs / f"soak-{i}.log"
+        print(f"soak: conduit test-suite run {i}/{n} ...")
+        code = run_leg(["just", "test"], sandbox / "conduit", log, env, SOAK_TIMEOUT)
+        result = "PASS" if code == 0 else "FAIL"
+        red += result == "FAIL"
+        record("3", f"soak-{i}", result, log)
+    return f"PASS ({n}/{n})" if red == 0 else f"FAIL ({red}/{n} red)"
+
+
+# ---------------------------------------------------------------------------
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        prog="cold-sim", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument("--from", dest="source", choices=["local", "github"], default="local")
+    p.add_argument("--dir", help="sandbox parent dir (default: fresh mktemp -d under /tmp)")
+    p.add_argument("--ring", type=int, choices=[1, 2, 3], help="run only this ring (default: all)")
+    p.add_argument("--repo", choices=APP_REPOS, help="limit ring 1 to one app repo")
+    p.add_argument(
+        "--leg",
+        action="append",
+        choices=RING3_LEGS,
+        help="limit ring 3 to these legs (repeatable; always run in runbook order)",
+    )
+    p.add_argument("--with-playbook", action="store_true",
+                   help="no-op (kept for compatibility: the published playbook is always cloned)")
+    p.add_argument("--with-docs", action="store_true", help="clone the local docs ledger sibling in")
+    p.add_argument("--soak", type=int, default=0, metavar="N", help="N extra conduit test-suite runs")
+    return p.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+
+    if args.dir:
+        sandbox = Path(args.dir).expanduser().resolve()
+        sandbox.mkdir(parents=True, exist_ok=True)
+    else:
+        sandbox = Path(tempfile.mkdtemp(prefix="cold-sim-", dir="/tmp"))
+    logs = sandbox / "logs"
+    logs.mkdir(exist_ok=True)
+    (sandbox / "gitconfig").write_text(GITCONFIG)
+    env = hostile_env(sandbox)
+    print(f"cold-sim: sandbox {sandbox} (--from {args.source}); hostile env: "
+          "gpgsign=true global gitconfig, /dev/null system config, COMO_* scrubbed")
+    ollama_ok, docker_ok = probe_env_facts(env)
+
+    # The demo's throwaway forge binds a host port (conduit's FORGE_PORT
+    # knob, default 3000). Pick a free one so the rehearsal coexists with
+    # whatever the host's dev servers hold — Next.js et al default to 3000.
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        env["FORGE_PORT"] = str(s.getsockname()[1])
+    print(f"cold-sim: FORGE_PORT={env['FORGE_PORT']} (free host port for the throwaway forge)")
+
+    github_base = os.environ.get("COMO_GIT_BASE", "https://github.com/como-technologies").rstrip("/")
+    wanted = list(SUITE)  # includes playbook (published; --with-playbook is a no-op)
+    if args.with_docs:
+        wanted.append("docs")
+    for name in wanted:
+        if args.source == "local" or name in LOCAL_ONLY:
+            url = f"file://{SIBLINGS / name}"
+            if not (SIBLINGS / name).is_dir() and not (sandbox / name).is_dir():
+                print(f"ERROR: no local sibling {SIBLINGS / name} to clone {name} from")
+                return 2
+        else:
+            url = f"{github_base}/{name}.git"
+        if not clone_repo(name, url, sandbox / name, env):
+            if name in ("portfolio", "conduit"):
+                print(f"ERROR: cannot clone {name} — rings 2/3 need it; aborting")
+                return 2
+            # A repo a stranger cannot fetch is a real red for that repo's
+            # legs (today: a private repo, no credentials) — record it and
+            # keep rehearsing the rest instead of aborting.
+            miss = logs / f"clone-{name}.log"
+            miss.write_text(
+                f"clone of {url} failed — unreachable from this environment"
+                " (private repo without credentials, or absent)\n"
+            )
+            record("0", f"clone-{name}", "FAIL", miss)
+
+    ring2_result = "SKIPPED"
+    if args.ring in (None, 1):
+        run_ring1(sandbox, logs, env, args.repo)
+    if args.ring in (None, 2):
+        ring2_result = run_ring2(sandbox, logs, env)
+    if args.ring in (None, 3):
+        run_ring3(sandbox, logs, env, args.leg or RING3_LEGS, docker_ok, args.with_playbook)
+    soak_result = run_soak(sandbox, logs, env, args.soak) if args.soak > 0 else None
+
+    print()
+    print(f"{'ring':<6}{'repo/leg':<14}{'result':<21}log")
+    for r in results:
+        print(f"{r['ring']:<6}{r['name']:<14}{r['result']:<21}{r['log']}")
+    red = [r for r in results if r["result"] == "FAIL"]
+    print(
+        f"cold-sim: {len(results)} legs — "
+        f"{sum(r['result'] == 'PASS' for r in results)} PASS, "
+        f"{sum(r['result'] == 'PASS-AS-DOCUMENTED' for r in results)} PASS-AS-DOCUMENTED, "
+        f"{sum(r['result'] == 'ENV-LIMITED' for r in results)} ENV-LIMITED, "
+        f"{len(red)} FAIL"
+    )
+    if red:
+        print("cold-sim: RED — a cold checkout does not do what the runbook promises")
+
+    ring3_json = {r["name"]: r["result"] for r in results if r["ring"] == "3"}
+    if soak_result is not None:
+        for i in range(1, args.soak + 1):
+            ring3_json.pop(f"soak-{i}", None)
+        ring3_json["soak"] = soak_result
+    print(json.dumps({
+        "ring1": {r["name"]: r["result"] for r in results if r["ring"] == "1"},
+        "ring2": ring2_result,
+        "ring3": ring3_json,
+    }))
+    return 1 if red else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

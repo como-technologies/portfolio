@@ -4,9 +4,14 @@
 Asserts the book's load-bearing claims against the sibling repos' reality:
 
   1. The Adopt chapter's conduit -> tuesday contract table string-matches
-     the constants in ../conduit/src/contract.rs.
+     the constants in ../conduit/src/contract.rs — and tuesday's strict-mode
+     hand-copy of the closed effort-label set (crates/tuesday-cli/src/
+     strict.rs VALID_EFFORT_LABELS) matches conduit's EFFORT_LABELS
+     byte-for-byte, in order (the two arrays share no crate; this is the
+     only gate tying them).
   2. Every CLI invocation the book quotes exists: adroit / conduit /
-     tuesday-report / assessments subcommands and load-bearing flags —
+     tuesday-report / amaker (assessments' CLI) subcommands and
+     load-bearing flags —
      including the forge-neutrality pin (N=3 proven: conduit must offer
      exactly gitea+github+gitlab), tuesday's SME-usable evidence (the
      quickstart page and the --from/--to range), and the customer-demo
@@ -40,7 +45,7 @@ printed per assertion group so pin drift stays visible. The clone leg is
 read-only (never pushes, never adds the cache as a remote, no credentials
 in URLs), honors COMO_OFFLINE=1 (an already-populated cache is used as-is,
 never fetched), and degrades to the skip when a repo has no reachable
-remote — conduit and playbook today. The ../docs evidence ledger is
+remote — none of the pinned siblings today. The ../docs evidence ledger is
 local-only by policy (docs/README.md): env -> sibling -> skip, NO clone
 leg ever. A fresh CI checkout proves less than a full portfolio checkout,
 by design.
@@ -74,16 +79,17 @@ CACHE = REPO / ".como" / "deps"
 # speed, but the printed resolve line flags a HEAD that differs from the
 # pin. Bumps are deliberate, reviewed edits — like conduit's adroit.rev.
 # Pinned at each sibling's published main carrying the docs/src/adr corpus, so a
-# fresh CI checkout (no siblings) clones the right reality. playbook has no
-# public remote yet, so its clone leg degrades to skip-with-notice (a present
-# ../playbook sibling resolves it for local-dev / the demo).
+# fresh CI checkout (no siblings) clones the right reality. playbook is
+# published (2026-07-05, fresh-history cut) at como-technologies/playbook;
+# its pin is the public root commit, and a present ../playbook sibling still
+# wins for local-dev / the demo.
 PINS = {
-    "conduit": "e6aa1d283b974ee07cea54080561e723f7ed1ba6",
-    "adroit": "cc4375499059ee42b8e8fdba43c88c7ee9ab712d",
-    "tuesday": "b6b8d6e5af0c753e359309712ff7c7b2e53648ef",
-    "assessments": "1ce889ba4547f19bba26029a5c638052a08440a1",
-    "pulse": "332a33afaaffed38f4194014819740945ad761cd",
-    "playbook": "30ab2da6410e5e6d3d8eeb3b709c23654a23a4d2",  # no remote yet
+    "conduit": "6dae385fd2b0cf1254139c9af35cd542d2aaad2c",
+    "adroit": "683049bb7f3d48c55cfe96daceab38a448b4ec9f",
+    "tuesday": "2f478807fefc16a107bf43acd9dd7ce5d6b23417",
+    "assessments": "9b05ae4859f28281309961cb059ba0d288b0c48c",
+    "pulse": "f3022b4e25c0f0242202e472ae29df4d778d4f87",
+    "playbook": "dc7c604791b579baa7e5d19ff69c60207bfa4074",
 }
 
 
@@ -391,6 +397,68 @@ def check_contract_table() -> None:
             )
 
 
+def check_effort_label_parity() -> None:
+    """The closed effort-label set exists twice by design: conduit emits it
+    (src/contract.rs EFFORT_LABELS) and tuesday's --strict validates it
+    (crates/tuesday-cli/src/strict.rs VALID_EFFORT_LABELS) — hand-copied
+    twin arrays with no shared crate. The book stakes the Adopt -> Measure
+    hand-off on the two sides reading the same markers, so this ties the
+    copies together: byte-identical values, same order, or red."""
+    PARITY = "conduit <-> tuesday effort-label parity"
+    hit = assert_book_states(
+        ADOPT, "fixed set of markers", "the conduit -> tuesday shared-marker claim"
+    )
+    if hit is None:
+        return
+    conduit = resolve_repo("conduit")
+    if conduit is None:
+        skip(PARITY, unresolved("conduit"))
+        return
+    tuesday = resolve_repo("tuesday")
+    if tuesday is None:
+        skip(PARITY, unresolved("tuesday"))
+        return
+
+    sides = [
+        (
+            "conduit EFFORT_LABELS",
+            conduit / "src" / "contract.rs",
+            r"pub const EFFORT_LABELS[^=]*=\s*\[(.*?)\];",
+        ),
+        (
+            "tuesday VALID_EFFORT_LABELS",
+            tuesday / "crates" / "tuesday-cli" / "src" / "strict.rs",
+            r"const VALID_EFFORT_LABELS[^=]*=\s*\[(.*?)\];",
+        ),
+    ]
+    labels: list[list[str]] = []
+    for what, path, pattern in sides:
+        if not path.exists():
+            skip(PARITY, f"{path} does not exist")
+            return
+        m = re.search(pattern, path.read_text(), re.S)
+        if m is None:
+            fail(
+                f"{what} is where the parity gate pins it",
+                f"{ADOPT}:{hit[0]} (both stages read the same markers)",
+                f"no such const in {path} — update it or this gate together",
+            )
+            return
+        labels.append(re.findall(r'"([^"]+)"', m.group(1)))
+
+    if labels[0] and labels[0] == labels[1]:
+        ok(
+            f"effort-label parity: tuesday's strict-mode copy matches conduit's"
+            f" EFFORT_LABELS byte-for-byte ({len(labels[0])} values, in order)"
+        )
+    else:
+        fail(
+            "tuesday --strict validates the exact effort-label set conduit emits",
+            f"conduit src/contract.rs EFFORT_LABELS = {labels[0]}",
+            f"tuesday crates/tuesday-cli/src/strict.rs VALID_EFFORT_LABELS = {labels[1]}",
+        )
+
+
 # ---------------------------------------------------------------------------
 # 2. Every CLI invocation the book quotes exists
 # ---------------------------------------------------------------------------
@@ -617,54 +685,58 @@ def check_tuesday_cli() -> None:
 
 
 def check_assessments_cli() -> None:
+    # assessments' headless CLI is the `amaker` binary (the repo keeps the
+    # assessments name; the product/CLI is amaker) — resolve the binary by
+    # that name so this never green-lights a stale pre-rename artifact.
     ASSESS = "src/loop/assess.md"
     verbs = [
-        ("author", ASSESS, "assessments author --brief"),
-        ("validate", ASSESS, "assessments validate"),
+        ("author", ASSESS, "amaker author --brief"),
+        ("validate", ASSESS, "amaker validate"),
         ("export", ASSESS, "schema-validated export"),
     ]
     repo = resolve_repo("assessments")
     if repo is None:
         skip("assessments CLI surface", unresolved("assessments"))
         return
-    bin_path = repo_binary(repo, "assessments")
+    bin_path = repo_binary(repo, "amaker")
     if bin_path is not None:
         help_text = run([str(bin_path), "--help"])
         if help_text is None:
-            fail("assessments --help runs", ASSESS, f"{bin_path} failed to execute")
+            fail("amaker --help runs", ASSESS, f"{bin_path} failed to execute")
             return
         for name, relpath, needle in verbs:
-            hit = assert_book_states(relpath, needle, f"the assessments `{name}` verb")
+            hit = assert_book_states(relpath, needle, f"the amaker `{name}` verb")
             if hit is None:
                 continue
             if has_subcommand(help_text, name):
-                ok(f"assessments --help lists `{name}` (claimed at {relpath}:{hit[0]})")
+                ok(f"amaker --help lists `{name}` (claimed at {relpath}:{hit[0]})")
             else:
                 fail(
-                    f"the book relies on `assessments {name}`",
+                    f"the book relies on `amaker {name}`",
                     f"{relpath}:{hit[0]}",
-                    f"`{name}` is not in assessments --help",
+                    f"`{name}` is not in amaker --help",
                 )
         return
-    # Cheaper proxy when the binary isn't built: the clap Subcommand enum.
-    cli_rs = repo / "src" / "cli.rs"
+    # Cheaper proxy when the binary isn't built: the clap Command enum in
+    # the amaker-cli crate (where the `amaker` binary's surface is defined).
+    cli_rs = repo / "crates" / "amaker-cli" / "src" / "lib.rs"
     if not cli_rs.exists():
         skip(
             "assessments CLI surface",
-            f"neither a built assessments binary under {repo}/target nor {cli_rs} present",
+            f"neither a built amaker binary under {repo}/target nor {cli_rs} present",
         )
         return
     src = cli_rs.read_text()
     for name, relpath, needle in verbs:
-        hit = assert_book_states(relpath, needle, f"the assessments `{name}` verb")
+        hit = assert_book_states(relpath, needle, f"the amaker `{name}` verb")
         if hit is None:
             continue
         variant = name.capitalize()
         if re.search(rf"^\s+{variant}\b", src, re.M):
-            ok(f"assessments src/cli.rs defines `{name}` (binary not built; clap-enum proxy)")
+            ok(f"amaker-cli lib.rs defines `{name}` (binary not built; clap-enum proxy)")
         else:
             fail(
-                f"the book relies on `assessments {name}`",
+                f"the book relies on `amaker {name}`",
                 f"{relpath}:{hit[0]}",
                 f"no `{variant}` variant in {cli_rs}",
             )
@@ -833,7 +905,14 @@ def check_playbook_selfserve() -> None:
         return
     repo = resolve_repo("playbook")
     if repo is None:
-        skip("the playbook self-serve rung evidence", unresolved("playbook"))
+        # The playbook is published; a badge whose evidence cannot be
+        # fetched is red, not skipped (the self-serve rung is a claim
+        # about what an outside reader can verify).
+        fail(
+            "the self-serve rung's evidence repo resolves",
+            f"{PAGES[0]} and {PAGES[1]}",
+            unresolved("playbook"),
+        )
         return
 
     justfile = repo / "justfile"
@@ -1264,6 +1343,7 @@ def check_assessments_sme_evidence() -> None:
 def main() -> int:
     print(f"verify-claims: book at {BOOK}, siblings under {SIBLINGS}")
     check_contract_table()
+    check_effort_label_parity()
     check_adroit_cli()
     check_adroit_sme_evidence()
     check_conduit_cli()
