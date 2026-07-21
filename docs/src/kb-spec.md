@@ -170,8 +170,9 @@ Each contract cites its evidence in the spike's
   from the marked `## Implementation` region, forge enrichment. Known gap:
   `export` drops custom frontmatter fields
   ([llm-wiki#11](https://github.com/como-technologies/llm-wiki/issues/11));
-  interim, summary rows take N+1 reads. Evidence: findings/issue-06 (§ in
-  tracking issue), findings/issue-10.
+  interim, summary rows take N+1 reads. Evidence: findings/issue-10 (seam
+  map); the numbering finding lives on
+  [kb-spike#6](https://github.com/como-technologies/kb-spike/issues/6) itself.
 
 ### 7. Admission & evidence
 
