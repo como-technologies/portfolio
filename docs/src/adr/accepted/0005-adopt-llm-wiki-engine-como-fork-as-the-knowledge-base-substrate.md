@@ -1,10 +1,10 @@
 # ADR-0005: Adopt llm-wiki-engine (Como fork) as the knowledge-base substrate
 
-> State: Proposed
+> State: Accepted
 
 ## Status
 
-Proposed
+Accepted
 
 ## Stakeholders
 

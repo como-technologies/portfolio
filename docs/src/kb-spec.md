@@ -4,7 +4,7 @@ The knowledge base that makes the playbook evidenced: typed pages, stable
 identity, mechanical anti-rot, and a git-native admission model. Produced by
 the [kb-spike](https://github.com/como-technologies/kb-spike) evaluation
 (ten findings, each closed with live-verified evidence) and adopted by
-[ADR-0005](./adr/proposed/0005-adopt-llm-wiki-engine-como-fork-as-the-knowledge-base-substrate.md).
+[ADR-0005](./adr/accepted/0005-adopt-llm-wiki-engine-como-fork-as-the-knowledge-base-substrate.md).
 Substrate: [`llm-wiki-engine`, Como fork](https://github.com/como-technologies/llm-wiki)
 (`como-main`). This chapter is the spec's interim home — once the production
 KB exists, the spec migrates into it as typed pages and this page becomes a
