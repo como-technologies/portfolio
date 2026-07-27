@@ -7,10 +7,12 @@ the [kb-spike](https://github.com/como-technologies/kb-spike) evaluation
 [ADR-0006](./adr/accepted/0006-adopt-llm-wiki-engine-como-fork-as-the-knowledge-base-substrate.md).
 Substrate: [`llm-wiki`](https://github.com/como-technologies/llm-wiki) — the Como
 KB product ([ADR-0008](./adr/accepted/0008-build-the-kb-product-in-the-fork-itself-developing-on-main.md)):
-a fork of `llm-wiki-engine` developed on `main`, pinned by release tag
-(first: `v0.5.0`). This chapter is the spec's interim home — once the production
-KB exists, the spec migrates into it as typed pages and this page becomes a
-projection.
+a fork of `llm-wiki-engine` developed on `main`. At this stage instances are
+**ephemeral and built from source at HEAD of `main`**
+([ADR-0009](./adr/accepted/0009-iterate-ephemeral-first-disposable-kb-instances-built-from-source-at-head.md));
+release-tag pinning returns when a persistent KB is declared. This chapter is
+the spec's interim home — once the production KB exists, the spec migrates
+into it as typed pages and this page becomes a projection.
 
 ---
 
@@ -108,21 +110,22 @@ Each contract cites its evidence in the spike's
 
 ### 2. Page types & schemas
 
-- Bundled types do not express the `decision` class → **custom types via
-  `schema add`**, one JSON Schema per type. Target classes: `decision`,
-  `guide`, `glossary-entry`, `worked-example`, `plan`.
-- The `decision` type is derived from adroit's `Adr`/`Status` model —
-  tracked at
-  [`kb-spike/schemas/decision.json`](https://github.com/como-technologies/kb-spike/blob/main/schemas/decision.json)
-  until the production space exists. Schemas are authored outside a space's
-  `schemas/` dir and installed via `schema add`.
+- The five target classes — `decision`, `guide`, `glossary-entry`,
+  `worked-example`, `plan` — **ship in-engine as the Como schema library**
+  (llm-wiki#14): `spaces create` installs them alongside the bundled types.
+  Further custom types remain a `schema add` away, one JSON Schema per type.
+- The `decision` type is derived from adroit's `Adr`/`Status` model
+  (authored in the spike at `kb-spike/schemas/decision.json`, now moved
+  into the fork's `schemas/decision.json`).
 - Custom types set **`additionalProperties: false`** — unknown keys fail
   loudly — and every field a head writes (e.g. adroit's `reference`) is
   declared.
 
 ### 3. Validation & strictness
 
-- `validation.type_strictness = "strict"`, always, set at provisioning.
+- `validation.type_strictness = "strict"`, always — `spaces create` writes
+  it into the generated `wiki.toml` (llm-wiki#14), so the contract travels
+  with the space.
 - **The CI gate**: every frontmatter violation class — missing required
   field, unknown type, out-of-enum value, failed `if/then` conditional,
   unknown key — fails `ingest` with exit 1 and a named rule. `lint` exits 1
@@ -141,8 +144,9 @@ Each contract cites its evidence in the spike's
   `superseded ⇒ superseded_by` via `if/then` fails ingest when violated.
 - **`[search.status]` carries both vocabularies** — custom keys rank
   exactly as configured (a superseded page scores 0.30× its accepted
-  rival at the recommended weights); provisionable via
-  `config set search.status.<key>` (fork). Evidence: findings/issue-03.
+  rival at the recommended weights); `spaces create` provisions both
+  vocabularies into the space's `wiki.toml` (llm-wiki#14), and
+  `config set search.status.<key>` adjusts them. Evidence: findings/issue-03.
 - Open sub-question, decided at adroit retrofit time: frontmatter as source
   of truth vs projection, and whether the ADR body keeps `## Status`.
 
@@ -169,19 +173,22 @@ Each contract cites its evidence in the spike's
 - **The read contract**: typed pages addressable by ULID with full-fidelity
   `content read` (CLI and MCP both), plus the `export` machine seam. Heads
   own derived views — numbering/addressing, review-due, plan extraction
-  from the marked `## Implementation` region, forge enrichment. Known gap:
-  `export` drops custom frontmatter fields
-  ([llm-wiki#11](https://github.com/como-technologies/llm-wiki/issues/11));
-  interim, summary rows take N+1 reads. Evidence: findings/issue-10 (seam
+  from the marked `## Implementation` region, forge enrichment. The former
+  export gap is closed:
+  [llm-wiki#11](https://github.com/como-technologies/llm-wiki/issues/11)
+  landed, so `export --format json` carries custom frontmatter and summary
+  rows need no per-page reads. Evidence: findings/issue-10 (seam
   map); the numbering finding lives on
   [kb-spike#6](https://github.com/como-technologies/kb-spike/issues/6) itself.
 
 ### 7. Admission & evidence
 
 - **The file is the API; a git commit is the unit of admission** — the
-  transaction semantics of Part I, verified to run today with two git hooks
-  (`ingest --dry-run` pre-commit; `ingest` post-commit) plus
-  catch-up-on-read (`index.auto_rebuild`).
+  transaction semantics of Part I. The two git hooks (`ingest --dry-run`
+  pre-commit; `ingest` post-commit) and catch-up-on-read
+  (`index.auto_rebuild`) are installed by `spaces create` (llm-wiki#14);
+  hooks fire only for real `git` commits, never the engine's own libgit2
+  commits, so the chain terminates by construction.
 - **`evidence/` is the capture layer** (renaming the engine's `raw/`,
   [llm-wiki#10](https://github.com/como-technologies/llm-wiki/issues/10)):
   unstructured material only. Citations are **always pinned `path@commit`**;
@@ -197,15 +204,21 @@ Each contract cites its evidence in the spike's
 ([ADR-0008](./adr/accepted/0008-build-the-kb-product-in-the-fork-itself-developing-on-main.md))
 
 - **`llm-wiki`** (`como-technologies/llm-wiki`): the Como KB product — engine,
-  Como schema library (starting with `decision`), provisioning (hooks, strict
-  defaults, search weights), and ops, all developed on `main`, the only
-  branch. **Pinning = release tags** (`v0.5.0` is the first); an upgrade is a
-  tag bump. The `upstream` remote exists for opportunistic cherry-picks; no
-  discipline is owed to it. The spec's substrate-neutral contracts (above)
-  are what keep the KB replaceable — not repo topology.
+  Como schema library (the five kb-spec §2 classes, shipped), provisioning
+  (hooks, strict defaults, search weights — shipped), and ops, all developed
+  on `main`, the only branch. **Pinning = HEAD of `main`, built from source**
+  at this stage
+  ([ADR-0009](./adr/accepted/0009-iterate-ephemeral-first-disposable-kb-instances-built-from-source-at-head.md));
+  release tags return with the first persistent instance. The `upstream`
+  remote exists for opportunistic cherry-picks; no discipline is owed to it.
+  The spec's substrate-neutral contracts (above) are what keep the KB
+  replaceable — not repo topology.
 - **KB instances**: near-pure data spaces (`wiki/`, `evidence/`, `schemas/`
-  as installed) created and managed by `llm-wiki`. Como's own KB is the
-  first instance — the product's permanent dogfood.
+  as installed) created and managed by `llm-wiki`. At this stage instances
+  are **ephemeral** (ADR-0009): stood up per-checkout by `just init`,
+  derived from canonical content that stays in its repo of record, and
+  destroyed freely. Como's first persistent KB is a deferred, deliberate
+  decision.
 - **The heads**: adroit, tuesday, pulse, and the librarian. Structured
   writers in; seam readers out — always against instances, via the seams.
 
