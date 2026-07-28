@@ -3,10 +3,15 @@
 Co-creation of an opinionated knowledge base tailored to your context:
 *decisions* recorded as ADRs, *guidance* as step-by-step guides — typed,
 schema-validated pages with AI assistance at every authoring step and a
-mechanical gate behind each one, published to your teams as a self-hosted
-static site they can extend. This is the human wrapper around the loop's
-[Prescribe](../loop/prescribe.md) stage; [the playbook](../products/playbook.md)
-is its ready-to-adopt packaging.
+mechanical gate behind each one. This is the human wrapper around the
+loop's [Prescribe](../loop/prescribe.md) stage. The target interaction is
+harness-first (this book's ADR-0010): your people work in the AI harness
+of their choice, configured with Como's tools over MCP, and the content
+lands in the KB in the right shape. Today — said plainly — Como drives
+that loop with your SMEs alongside; the authoring kit that hands it to
+your harness is in flight
+([portfolio#7](https://github.com/como-technologies/portfolio/issues/7)),
+and [the playbook](../products/playbook.md) provides starter content.
 
 **Inputs.** The assessment export from an
 [Assessment engagement](./assessment.md) (or your own equivalent — the seam

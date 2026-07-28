@@ -39,10 +39,10 @@ flowchart LR
 
 ## Where this is going
 
-The knowledge base is AI-driven today at every seam where a tool writes to it — assessments and adroit put an assistant in the authoring loop, conduit puts an agent behind accepted decisions, and every AI output passes a deterministic validation gate before it lands. Two steps are future state, and we say so plainly:
+The knowledge base is AI-driven today at every seam where a tool writes to it — assessments and adroit put an assistant in the authoring loop, conduit puts an agent behind accepted decisions, and every AI output passes a deterministic validation gate before it lands. The interface model is decided (this book's ADR-0010, plan of record [portfolio#7](https://github.com/como-technologies/portfolio/issues/7)): **harness-first** — humans work in the AI harness of their choice, configured with Como's tools over MCP; content is born in the KB as typed pages; the CLIs and native surfaces stay as alternate doors. What is decided versus what is shipped, plainly:
 
-- **The librarian** — an AI head over the KB that files captured evidence, links concepts, refreshes derived pages, and flags contradictions against accepted decisions: the knowledge base organizing itself behind the same admission gates every tool obeys. It is specified ([the KB spec, Part I](./kb-spec.md#part-i--how-content-moves)) and not yet built.
-- **End-user hands.** Today the tools guide Como and the SMEs working alongside us through the loop; the trajectory — visible in the maturity ladder's SME-usable → self-serve climb — is the same guided loop driven by client teams themselves.
+- **In flight** — the authoring kit (instructions, Como skills, reference harness configs, shipped with llm-wiki) that packages the harness-first workflow, and a guarded MCP write path for decisions so MCP-only harnesses can author them through adroit. Until it lands, the harness-first loop is driven by Como with SMEs alongside.
+- **Future state** — **the librarian**: an AI head over the KB that files captured evidence, links concepts, refreshes derived pages, and flags contradictions against accepted decisions — the knowledge base organizing itself behind the same admission gates every tool obeys. It is specified ([the KB spec, Part I](./kb-spec.md#part-i--how-content-moves)) and not yet built.
 
 ## Where services wrap the tools
 
