@@ -14,7 +14,7 @@ unchanged seams); clients (ship the `llm-wiki` binary + tagged releases).
 
 ## Context and Problem Statement
 
-[ADR-0007](../superseded/0007-package-kb-capability-as-lore-a-shippable-product-layer-between-the-engine-fork-and-kb-instances.md)
+ADR-0007 (since removed; in git history)
 introduced lore, a product layer between the engine fork and KB instances,
 to preserve the fork's upstream purity (generic patches only, a clean
 upstream-PR branch) while giving Como-specific assets a shippable home.

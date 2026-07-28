@@ -32,7 +32,7 @@ straight through strict ingest, and the sequence ends with
 [Prescribe](../loop/prescribe.md) chapter shows the read side the Adopt
 engine consumes.
 
-## Where it came from — and where the template went
+## Where it came from
 
 The starter content is distilled from the pattern's one delivered client
 engagement: a decision corpus and guides built for an enterprise cloud
@@ -42,13 +42,9 @@ where that team operates. Content was written fresh, with a CI-enforced
 rule that no client material enters the product. One delivered instance
 remains the honest count.
 
-Between that engagement and today, this content shipped as a clonable
-**template repository** — a self-serve product with its own gate. The
-harness-first decision (this book's ADR-0010) retired that workflow:
+For a while this content shipped as a clonable template repository; the
+harness-first decision (this book's ADR-0010) retired that workflow —
 content is born in the KB through a conversation, not maintained in a
-cloned repo, so the template's repository is **archived** (read-only,
-2026-07-28) and its **self-serve badge retired with it** — the rung was
-earned by the template's own evidence and doesn't transfer; the
-harness-first offering will earn its own rung on its own evidence. The
-corpus lives on as this starter content, whose new home of record is the
-kit.
+cloned repo — and the corpus lives on as this starter content, whose
+home of record is the kit. The harness-first offering earns its own
+maturity rung on its own evidence.

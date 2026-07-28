@@ -15,7 +15,7 @@ portfolio *is*. This README is about how to **build and work on the book**.
 |---|---|---|
 | [Rust toolchain](https://rustup.rs) (`cargo`) | mdBook and its plugins are installed via `cargo install` | `curl https://sh.rustup.rs -sSf \| sh` |
 | [`just`](https://github.com/casey/just) | Command runner for every task below | `cargo install just` (or your package manager) |
-| `python3` | Only for the CI truthfulness gates (`verify-claims`, `refresh-evidence`) — not needed to read or build the book | preinstalled on most systems |
+| `python3` | Only for the CI truthfulness gate (`verify-claims`) — not needed to read or build the book | preinstalled on most systems |
 
 ## Getting started
 
@@ -63,5 +63,5 @@ src/            book content (Markdown); SUMMARY.md is the table of contents
 justfile        all tasks — run `just` to list them
 book.toml       mdBook configuration
 gruvbox/        theme assets
-scripts/        verify-claims, refresh-evidence (CI tooling)
+scripts/        verify-claims, cold-sim (CI tooling)
 ```

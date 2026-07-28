@@ -50,7 +50,7 @@ and a single home per app keeps the book truthful — the hybrid would say
 everything twice and drift twice.
 
 Concretely: `SUMMARY.md` gains a "The Loop" part with one chapter per stage —
-Assess (assessments), Prescribe (adroit + the playbook), Adopt (conduit, plus
+Assess (assessments), Prescribe (adroit + the knowledge base), Adopt (conduit, plus
 where services wrap it), Measure (pulse + tuesday). Each app is rendered with
 the standard skeleton: what it is / maturity badge / how it enters the loop
 (its produce and consume seams, with exact commands) / where its evidence

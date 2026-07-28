@@ -10,7 +10,7 @@ The suite is a set of sibling repositories that resolve each other by the
 uniform convention (each repo's ADR records it): an explicit `COMO_<REPO>_DIR`
 env override, else a sibling checkout `../<repo>`, else a pinned git clone into
 a gitignored cache. The simplest layout is all repos checked out under one
-parent (`assessments`, `adroit`, `conduit`, `tuesday`, `pulse`, `playbook`,
+parent (`assessments`, `adroit`, `conduit`, `tuesday`, `pulse`,
 `llm-wiki`, `portfolio`) — then everything resolves with no configuration
 (`llm-wiki`, the KB substrate, resolves like any other sibling and builds
 from source at HEAD per this book's ADR-0009). Each app's ADR
@@ -37,22 +37,12 @@ that spin up throwaway git repos in their tests disable commit signing *in those
 disposable repos*, so a global `commit.gpgsign = true` (with no key for the
 throwaway identity) can't fail them.
 
-**Sandbox-external inputs.** Two inputs resolve from outside a single
-checkout; where one is absent the gate and the demo **skip or stop with a
-notice that names the knob**, never silently:
-
-- the **run-evidence ledger** (`COMO_DOCS_DIR`, else a sibling `../docs`) that
-  the per-run pages and `just refresh-evidence` read — so the run-evidence
-  claims below verify only where the ledger is checked out;
-- the **playbook** corpus the Adopt demo seeds onto the throwaway forge (the
-  fictional client's decisions — a legacy corpus, which is exactly what a
-  real client brings). The repo is **archived** (read-only since
-  2026-07-28; the template product retired to the kit's starter content by
-  ADR-0010) but stays clonable at
-  [como-technologies/playbook](https://github.com/como-technologies/playbook),
-  so a sibling `../playbook` clone resolves it like any other suite repo;
-  `COMO_PLAYBOOK_DIR` and `COMO_GIT_BASE` / `COMO_PLAYBOOK_GIT` remain as
-  overrides.
+**Every input is a suite repo.** The Adopt demo's fictional client corpus
+is built from llm-wiki's starter content (`kit/starter/decisions` — a
+legacy-format corpus, which is exactly what a real client brings), so it
+resolves like everything else: the uniform convention, no special-case
+inputs, no extra knobs. Where a repo is absent the gate and the demo
+**skip or stop with a notice that names the knob**, never silently.
 
 ## Ring 1 — each app on its own
 
@@ -71,8 +61,7 @@ covers provisioning, the Como schema library, and the kit's counted starter
 content. Green in all of them means each app is internally
 sound — the Rust apps formatted, lint-clean, and tested; every mdbook builds;
 every corpus validates. This is the per-app truth check and the fastest
-signal. (The archived playbook repo is no longer part of this ring — it is
-read-only history and a demo input, not a gated app.)
+signal.
 
 The Rust repos also gate dependency advisories with `cargo audit` — a
 `crate-audit` leg in `just ci` (conduit runs it as a dedicated CI job
@@ -94,7 +83,7 @@ against every sibling repo's actual reality: the conduit→tuesday contract
 strings against `conduit/src/contract.rs`, every CLI invocation the book quotes
 against the real `--help`, the forge-neutrality claim against the adapters
 conduit actually offers, each maturity badge against its repo's ADR corpus and
-the intro table, and each run-evidence page against the captured artifacts. A
+the intro table, and the starter content's counted claims against the kit. A
 red here means the book and a sibling disagree — fix one of them, never the
 gate. This is the single command that answers "do the apps still agree with
 each other." (See [How this book stays true](./truthfulness.md).)
@@ -109,7 +98,7 @@ everything down:
 cd conduit
 demo/kit/preflight               # verify docker (+ pull llama3.2 for --live)
 just init-adroit                 # build the pinned adroit into .conduit/bin
-demo/kit/demo-up                 # throwaway Gitea + seeded playbook + all binaries
+demo/kit/demo-up                 # throwaway Gitea + seeded client corpus + binaries
 demo/kit/beat-1-measure-prior    # pulse's prior-iteration signal
 demo/kit/beat-2-assess           # brief + signal -> assessment   (--live for ollama)
 demo/kit/beat-3-prescribe        # assessment -> accepted ADR + stored plan  (--live)
@@ -121,9 +110,10 @@ demo/kit/demo-down               # destroys the forge; leaves nothing
 `init-adroit` resolves the pinned adroit by the suite convention — the adroit
 remote at the pinned rev (reachable there today), else a sibling `../adroit`
 when the remote is unreachable (its HEAD, with a loud local-dev notice, if
-that checkout lacks the exact pin). `demo-up` resolves the playbook and the sibling
-binaries the same way and seeds the throwaway forge; it stops early with named
-knobs if Docker isn't up or no playbook resolves (run `preflight` first).
+that checkout lacks the exact pin). `demo-up` builds the client corpus from
+llm-wiki's starter content, resolves the sibling binaries the same way, and
+seeds the throwaway forge; it stops early with named knobs if Docker isn't
+up or llm-wiki doesn't resolve (run `preflight` first).
 
 Each beat prints its talking point and the machine evidence it just produced
 (verify 6/6, byte-identical forge transcripts, `CROSS-CHECK PASS`). The
@@ -186,11 +176,10 @@ portfolio/scripts/cold-sim --ring 3 --leg preflight   # stepwise: one ring, one 
   (a clone carries committed history only, never the dirty tree).
   `--from github` clones `https://github.com/como-technologies/<repo>`
   instead — the published reality.
-- The sandbox clones the **playbook** like every other suite repo (it is
-  published), so ring 3's `demo-up` must fully stand up — the old documented
-  stop at beat `[1/6]` is now a real `FAIL`. Only the `../docs` ledger stays
-  out by default (local-only by policy); `--with-docs` opts it in from the
-  local sibling.
+- The sandbox clones **llm-wiki** like every other suite repo, so ring 3's
+  `demo-up` must fully stand up — the client corpus builds from its starter
+  content, and a failure to resolve it is a real `FAIL`, not a documented
+  stop.
 - What it cannot simulate it records instead of faking: ollama-on-PATH and
   docker-daemon reachability are printed as env facts, and a down daemon
   degrades the docker-dependent ring-3 legs to `ENV-LIMITED` — preflight
@@ -201,33 +190,10 @@ portfolio/scripts/cold-sim --ring 3 --leg preflight   # stepwise: one ring, one 
   sandbox. The caller's cargo registry cache is reused — fresh clones
   already force cold `target/` builds.
 
-## The validation record
-
-The loop has been run end to end three times, with every seam machine-checked
-and the artifacts captured:
-
-- [Run 1 — the iteration-1 capstone](./loop/dogfood/run-1.md)
-- [Run 2 — the iteration-2 capstone](./loop/dogfood/run-2.md)
-- [Run 3 — the iteration-3 capstone](./loop/dogfood/run-3.md)
-
-Each page is regenerated mechanically from its captured run (`just
-refresh-evidence`), so the evidence on the page is the evidence from the run.
-
 ## Publishing
 
 Standing the suite up locally needs no remotes. Publishing each app to its
-canonical remote — and reconciling the two repos whose origins carry separate
-owner-side work — is a deliberate set of owner actions, kept out of the loop's
-automation; the current per-repo procedure lives in the workspace ledger at
-`docs/iteration-4/owner-actions.md`.
-
-The formerly outstanding actions are done: the pinned adroit rev in
-`conduit/adroit.rev` resolves from the adroit remote, and the playbook was
-published at
-[como-technologies/playbook](https://github.com/como-technologies/playbook)
-(2026-07-05, a fresh-history cut of the template) and later **archived**
-(2026-07-28, the template product retired by ADR-0010 — read-only, still
-clonable, so the demo keeps resolving it as the fictional client's legacy
-corpus). A cold checkout that clones the suite side by side still runs
-the demo with no overrides. The only remaining local-only input is the
-`../docs` run-evidence ledger, by policy.
+canonical remote is a deliberate owner action, kept out of the loop's
+automation. The pinned adroit rev in `conduit/adroit.rev` resolves from the
+adroit remote, and a cold checkout that clones the suite side by side runs
+the demo with no overrides.

@@ -1,6 +1,6 @@
 # How this book stays true
 
-This book describes seven sibling repos that all move — the six apps and
+This book describes six sibling repos that all move — the five apps and
 llm-wiki, the KB substrate — and prose rots silently
 when reality does. So the book's truthfulness is mechanical, not
 aspirational: a scripted gate, `scripts/verify-claims`, runs first in
@@ -43,12 +43,12 @@ checks, pinned to drift-resistant anchors:
    **spike** or higher must have a non-empty adroit-managed ADR corpus in
    its repo's working tree — merged main, not a side branch — and the
    introduction's TAPS table must agree with each chapter's badge line.
-5. **Evidence-ledger discipline.** The [iteration changelog](./changelog.md)
-   is a first-class SUMMARY page, and every per-run evidence page under
-   the [dogfood chapter](./loop/dogfood.md) is listed in SUMMARY, states a
-   captured-run pointer that resolves in the workspace ledger
-   (`docs/iteration-N/run-N`), and has a matching per-iteration changelog
-   entry.
+   The starter content's counted claims (five accepted decisions, three
+   with stored plans, the 11-record backlog, ten glossary pages) pin
+   against the llm-wiki kit the same way.
+5. **Ledger discipline.** The [iteration changelog](./changelog.md) is a
+   first-class SUMMARY page — the per-iteration index badge moves are
+   recorded in, never a page that silently disappears.
 
 A failure prints the claim, the book `file:line` that makes it, and what
 reality returned instead.

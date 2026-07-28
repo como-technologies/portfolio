@@ -20,15 +20,6 @@ verify-claims:
 book:
     mdbook build docs
 
-# Re-extract the per-run dogfood evidence pages (src/loop/dogfood/run-N.md)
-# from the captured full-loop run directories in the workspace evidence
-# ledger (${COMO_DOCS_DIR:-../docs}/iteration-N/run-N — a local-only git
-# repo by policy: no remote, never pushed, never cloned). With no RUN_DIR
-# every committed run is refreshed, so a new run's directory is picked up
-# when it lands and breaks nothing beforehand. Deterministic and idempotent.
-refresh-evidence RUN_DIR="":
-    python3 scripts/refresh-evidence {{RUN_DIR}}
-
 # Validate the adr/ corpus with adroit, resolved by the suite's uniform
 # convention (ADR-0004; self-contained — never sourced from a sibling):
 # ADROIT_BIN -> sibling ../adroit build (release preferred over debug;

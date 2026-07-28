@@ -1,4 +1,4 @@
-# KB substrate spike — llm-wiki-engine over playbook content (portfolio issue 3)
+# KB substrate spike — llm-wiki-engine over the template corpus (portfolio issue 3)
 
 Date: 2026-07-04/05 (UTC). Bounded spike for the owner-ratified issue-3 proposal
 (Como KB as a first-class TAPS node) **with the referee's INVERSION**: the KB
@@ -10,7 +10,7 @@ keeps owning its format; the KB never writes decision pages.
   `target/release/adroit` built after the HEAD commit).
 - conduit pin: **cc43754** (`conduit/adroit.rev` → `.conduit/bin/adroit`, also 0.2.0).
 - Sandbox instance (session-scoped, not committed):
-  `kb-spike/` — wiki repo `kb/` (space `comokb`), playbook content copied minus
+  `kb-spike/` — wiki repo `kb/` (space `comokb`), template-corpus content copied minus
   `.git` and minus `ci/banned-terms.txt` (never read, never copied).
 
 ## Verdict summary
@@ -18,7 +18,7 @@ keeps owning its format; the KB never writes decision pages.
 | # | Gate | Verdict |
 |---|------|---------|
 | 1 | Install substrate | GREEN — `cargo install llm-wiki-engine --locked` → v0.4.1 in 3m05s |
-| 2 | Stand up wiki over playbook content | GREEN — 3 guides + 10 glossary entries + section page typed & schema-validated; ADR corpus resident at `wiki/decisions/` |
+| 2 | Stand up wiki over the template corpus | GREEN — 3 guides + 10 glossary entries + section page typed & schema-validated; ADR corpus resident at `wiki/decisions/` |
 | 3 | Engine lint | PARTIAL — 0 errors on every KB-authored typed page; 10 invariant `broken-link` errors, all inside the adroit corpus (file-relative links vs the engine's slug-only link model) |
 | 4 | adroit read slice over KB-resident corpus | GREEN — check/manifest/list/show/plan all normal, stored-plan read byte-identical to the source-repo hash |
 | 5 | Write round-trip + unknown-key destruction | GREEN (demonstrated) — one `set-status` on the frontmatter profile silently destroys `type:` + `kb_links:`; markdown profile preserves a foreign block (minimal-diff writes) but the engine then refuses the page; lint error set invariant across all adroit writes |
@@ -48,10 +48,10 @@ content root `kb/wiki/`, type schemas at `kb/schemas/*.json`
 `decision`, `guide`, `glossary-entry` registered beside the defaults).
 
 Ported as typed pages (frontmatter per engine conventions, links rewritten to
-root-relative slugs): `guides/adopt-read-path`, `guides/adopting-this-playbook`,
+root-relative slugs): `guides/adopt-read-path`, `guides/adopting-the-corpus`,
 `guides/adr-review-process` (type `guide`), ten `glossary/*` pages (type
 `glossary-entry`), `glossary/README` (type `section`). The real adroit-managed
-corpus (`playbook docs/src/adr`, markdown/by-status profile) copied verbatim to
+corpus (the template corpus at `docs/src/adr`, markdown/by-status profile) copied verbatim to
 `kb/wiki/decisions/` — 18 ADRs + per-status READMEs, untouched.
 
 ### Draft schemas
@@ -80,7 +80,7 @@ serde derive with **no unknown-key preservation** (frontmatter.rs:14-33) and
 `serialize` emits exactly the declared fields (frontmatter.rs:51-78), so
 foreign keys are not merely unspecified, they are destroyed on write (gate 5).
 The engine's `type:` routing key is allowed as a documented exception the KB
-must never rely on. Note the playbook instance uses adroit's **markdown**
+must never rely on. Note the template instance used adroit's **markdown**
 profile (no frontmatter at all — `format.rs`), so this schema describes the
 frontmatter-profile variant; in the real instance decision pages are typed by
 corpus location.
@@ -137,7 +137,7 @@ plan 4 -o json    → {"reference":"ADR-0004", stored:true, plan 2061 B}
 
 Determinism: `plan 4 -o json` twice → sha256
 `d33936ca1e9a914c6a817e544b42615738e4637b56c389f7c7cdf18ab14578fa` both runs —
-**the same hash the playbook's Adopt-Read-Path guide documents against the
+**the same hash the template's Adopt-Read-Path guide documented against the
 original corpus** (adopt-read-path.md §3). KB residence changes nothing on the
 read slice.
 
@@ -149,7 +149,7 @@ Engine re-ingest commits the move; lint before/after: errors 10→10,
 **new errors: none, resolved: none** (warning delta later in the run: 2 new
 `orphan` warnings — the moved 0006 slug and the gate-5B2 pilot page).
 
-**B1. Markdown profile (the playbook's actual profile).** Prepended a KB
+**B1. Markdown profile (the template corpus's actual profile).** Prepended a KB
 frontmatter block (`type: decision`, `kb_links: [glossary/decision-record]`)
 to KB-resident `accepted/0002…`. adroit `check`: still 18/0. adroit write
 (`set-review 2 2026-08-01`): the block **survives** — diff shows only

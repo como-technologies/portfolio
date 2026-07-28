@@ -67,14 +67,8 @@ apps run against, and its stage — ephemeral-first, built from source at
 HEAD — is recorded in this corpus's ADR-0006/0008/0009 rather than graded
 on the app ladder; the starter content is content, not an app, and is
 graded by its rehearsed bootstrap staying gate-clean instead. The climbs
-above dogfooding are gated by evidence in each app's own repo: tuesday
-moved at the iteration-3 close; adroit and assessments moved to
-SME-usable at the iteration-4 open. conduit stays dogfooding by an honest
-call — it has the N=3 forge-neutral engine and the rehearsed
-customer-demo kit, but no owner-published remote and no external driver
-yet, so the rung waits on owner action. The ladder also records a
-retirement: the playbook template earned **self-serve** at the
-iteration-3 close and carried it until ADR-0010 retired the product —
-the badge retired with it rather than transferring to a successor, and
-the harness-first offering will earn its own rung on its own evidence.
-Nothing claims a rung its repo can't evidence.
+above dogfooding are gated by evidence in each app's own repo. conduit
+stays dogfooding by an honest call — it has the N=3 forge-neutral engine
+and the rehearsed customer-demo kit, but no owner-published remote and no
+external driver yet, so the rung waits on owner action. Nothing claims a
+rung its repo can't evidence.

@@ -23,9 +23,8 @@ doc repo.
   begins with: five accepted engineering decisions (three with stored
   implementation plans), an 11-record Proposed backlog, ten glossary
   entries, and the ADR review-process guide. Distilled from the
-  pattern's one delivered engagement; formerly shipped as a clonable
-  template repository, retired by ADR-0010 (repo archived, its
-  self-serve badge retired with it — the honest ladder).
+  pattern's one delivered engagement (the clonable-template era it
+  briefly shipped in ended with ADR-0010).
 
 Each engagement produces a tailored knowledge base — opinionated where
 the client needs a jumpstart, flexible where they have their own

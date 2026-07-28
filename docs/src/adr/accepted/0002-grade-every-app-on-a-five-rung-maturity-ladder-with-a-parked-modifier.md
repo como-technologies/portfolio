@@ -67,7 +67,7 @@ Badges as of this decision, graded against each repo's captured evidence
 
 - assessments — **dogfooding**
 - adroit — **dogfooding**
-- the playbook pattern — **dogfooding**
+- the template content product (since retired by ADR-0010) — **dogfooding**
 - conduit — **spike**
 - tuesday — **dogfooding**
 - pulse — **dogfooding (parked)**

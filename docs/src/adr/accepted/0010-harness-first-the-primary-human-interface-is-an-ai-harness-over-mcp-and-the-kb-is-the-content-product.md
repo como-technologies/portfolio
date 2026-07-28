@@ -10,7 +10,7 @@ Accepted
 
 Portfolio owner (decides; drives the plan of record); tool maintainers
 (adroit, tuesday, pulse — MCP surfaces and typed page emission become
-first-class work); playbook owner (the product retires to starter
+first-class work); the template product owner (it retires to starter
 content, staged); prospective clients (bring their own harness and
 model); services (the engagement shape follows the interface).
 
@@ -24,7 +24,7 @@ instances are ephemeral and built from source at HEAD
 and adroit operates exclusively against KB spaces (adroit ADR-0020).
 But the content-product story still assumed teams clone a template
 repository and hand-maintain markdown. Reviewing the Prescribe narrative
-exposed the seams in that story: a client cloning the playbook gets no
+exposed the seams in that story: a client cloning the template gets no
 KB at all; guides have no KB representation (only decisions have a
 writer); and agents can only know content that reaches a space. The
 deeper problem is the premise. Given how content authoring now actually
@@ -53,14 +53,14 @@ records the ratified plan.
 
 ## Considered Options
 
-1. **Status quo** — the playbook remains the clonable content product
+1. **Status quo** — the template remains the clonable content product
    beside the KB; the book labels the disconnect honestly.
 2. **Repo-cloning UX, KB-backed** — the template stands up a space on
    init, guides ported to typed pages in-repo; cloning remains the
    human workflow.
 3. **Harness-first** — the primary human interface is the user's own AI
    harness configured with Como's tools over MCP; content is born in
-   the KB; the playbook retires to starter content.
+   the KB; the template product retires to starter content.
 
 ## Decision Outcome
 
@@ -83,7 +83,7 @@ Chosen: **harness-first (option 3).** Concretely:
   with low confidence and are promoted on human review; citations are
   pinned `path@commit`; humans hold acceptance. The gates check shape
   deterministically; truth stays a human judgment.
-- **The playbook retires as a product, staged.** Its repo re-scopes to
+- **The template product retires, staged.** Its repo re-scopes to
   a starter-content corpus in its own wave (superseding its ADR-0014
   there); the demo kit and this book's truthfulness pins move in
   lockstep; the self-serve badge retires with the product until the
@@ -128,12 +128,12 @@ Chosen: **harness-first (option 3).** Concretely:
 Wave 0 (this record): the book truth-syncs in the same commit —
 introduction (the AI-through-the-loop paragraph, the Prescribe loop
 item, One substrate under the loop), roadmap (Where this is going),
-products overview (the playbook marked retiring to starter content),
+products overview (the template product marked retiring to starter content),
 and the Knowledge base authoring service page — all in honest tense:
 the decision is present, the authoring kit is in flight, the librarian
 stays future. Waves 1–5 per portfolio#7: the authoring kit lands in
 llm-wiki (the fork is the product, ADR-0008); adroit's guarded MCP
-write slice supersedes its ADR-0015 in its own corpus; the playbook
+write slice supersedes its ADR-0015 in its own corpus; the template
 retirement re-scopes its repo and retargets this book's pins; tuesday
 and pulse emit typed report pages; operating.md gains the harness ring.
 Suite rules apply throughout: Rust or shell only, trunk-based waves,

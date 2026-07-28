@@ -11,11 +11,11 @@ Accepted
 Portfolio owner (decides; steward of the fork); sibling-tool maintainers
 (adroit, tuesday, pulse become structured writers against the KB spec); the
 future librarian agent layer (consumes the spec's seams); prospective client
-readers (the KB is what makes the playbook evidenced).
+readers (the KB is what makes the prescriptions evidenced).
 
 ## Context and Problem Statement
 
-The portfolio has no knowledge base: the playbook is unevidenced, decisions
+The portfolio has no knowledge base: the prescriptions are unevidenced, decisions
 and their sources live in disconnected repos, and nothing mechanical stops
 knowledge from rotting (portfolio issue #3). Issue #3 specified the need — a
 typed, linked, lint-gated KB with a sources layer — and issue #4 posed the
@@ -86,7 +86,7 @@ the spec and upstreamable if engagement ever resumes.
 ### Supersedes ADR-0005 (spec-only entry)
 
 An earlier bounded spike ([evidence](../../spikes/kb-substrate.md)) reached
-[ADR-0005](../superseded/0005-specify-the-como-knowledge-base-as-a-typed-page-contract-with-adroit-owned-decision-pages.md):
+ADR-0005 (since removed; in git history):
 spec-only, no substrate dependency — the right call against stock 0.4.1
 before the spec existed, and its own text scheduled this revisit. Its
 disqualifiers are each retired above; two of its findings carry forward:

@@ -11,10 +11,6 @@
 - [Prescribe](./loop/prescribe.md)
 - [Adopt](./loop/adopt.md)
 - [Measure](./loop/measure.md)
-- [The loop, run for real](./loop/dogfood.md)
-  - [Run 1 — the iteration-1 capstone](./loop/dogfood/run-1.md)
-  - [Run 2 — the iteration-2 capstone](./loop/dogfood/run-2.md)
-  - [Run 3 — the iteration-3 capstone](./loop/dogfood/run-3.md)
 
 # Services
 

@@ -26,11 +26,9 @@ Asserts the book's load-bearing claims against the sibling repos' reality:
      content's counted claims (five accepted decisions, three with stored
      plans, the 11-record backlog, ten glossary pages, the guide + the
      rehearsed-bootstrap README) pin against the llm-wiki kit.
-  5. Evidence-ledger discipline: the per-iteration changelog is a
-     first-class SUMMARY page; every per-run evidence page under
-     src/loop/dogfood/ is listed in SUMMARY, states a captured-run
-     pointer that resolves in the workspace ledger (../docs), and has a
-     matching per-iteration changelog entry.
+  5. Ledger discipline: the per-iteration changelog is a first-class
+     SUMMARY page, and the retired per-run evidence apparatus stays
+     retired (capstone history lives in git).
 
 Every assertion pins BOTH sides: the claim must still be present in the
 book (so a rewrite that drops a pinned claim updates this script too) and
@@ -45,9 +43,7 @@ printed per assertion group so pin drift stays visible. The clone leg is
 read-only (never pushes, never adds the cache as a remote, no credentials
 in URLs), honors COMO_OFFLINE=1 (an already-populated cache is used as-is,
 never fetched), and degrades to the skip when a repo has no reachable
-remote — none of the pinned siblings today. The ../docs evidence ledger is
-local-only by policy (docs/README.md): env -> sibling -> skip, NO clone
-leg ever. A fresh CI checkout proves less than a full portfolio checkout,
+remote — none of the pinned siblings today. A fresh CI checkout proves less than a full portfolio checkout,
 by design.
 
 A red `just ci` when a sibling drifts is the feature, not a bug.
@@ -79,10 +75,7 @@ CACHE = REPO / ".como" / "deps"
 # speed, but the printed resolve line flags a HEAD that differs from the
 # pin. Bumps are deliberate, reviewed edits — like conduit's adroit.rev.
 # Pinned at each sibling's published main carrying the docs/src/adr corpus, so a
-# fresh CI checkout (no siblings) clones the right reality. playbook is
-# published (2026-07-05, fresh-history cut) at como-technologies/playbook;
-# its pin is the public root commit, and a present ../playbook sibling still
-# wins for local-dev / the demo.
+# fresh CI checkout (no siblings) clones the right reality.
 PINS = {
     "conduit": "6dae385fd2b0cf1254139c9af35cd542d2aaad2c",
     "adroit": "683049bb7f3d48c55cfe96daceab38a448b4ec9f",
@@ -90,9 +83,7 @@ PINS = {
     "assessments": "9b05ae4859f28281309961cb059ba0d288b0c48c",
     "pulse": "f3022b4e25c0f0242202e472ae29df4d778d4f87",
     # The KB product; carries the authoring kit + starter content the book
-    # claims (ADR-0010 / portfolio#7 wave 3). The retired playbook template's
-    # pin is gone with its check — the archived repo is a demo input now, not
-    # a book claim.
+    # claims (ADR-0010 / portfolio#7).
     "llm-wiki": "b1aa454d7bdb6cff2f9f1ae9668b418a85669f65",
 }
 
@@ -219,22 +210,6 @@ def unresolved(name: str) -> str:
         f"no {name} checkout (set COMO_{name.upper()}_DIR, check out"
         f" ../{name}, or set COMO_GIT_BASE for the .como/deps clone cache)"
     )
-
-
-def resolve_docs() -> Path | None:
-    """The workspace evidence ledger. docs is local-only by policy
-    (docs/README.md: no remote, ever), so this is env -> sibling -> None —
-    NO clone leg, by design."""
-    override = os.environ.get("COMO_DOCS_DIR", "").strip()
-    if override:
-        path = Path(override).expanduser()
-        if not path.is_absolute():
-            path = (REPO / path).resolve()
-        if path.is_dir():
-            return path
-        print(f"notice: COMO_DOCS_DIR={override} is not a directory; trying the sibling")
-    docs = SIBLINGS / "docs"
-    return docs if docs.is_dir() else None
 
 
 def repo_binary(repo: Path, name: str) -> Path | None:
@@ -994,7 +969,7 @@ LADDER = ["spec", "spike", "dogfooding", "SME-usable", "self-serve"]
 # silently passes on an empty dir). One source of truth for the per-repo path:
 # Every app keeps its ADR corpus at the SAME path inside its mdbook source —
 # the suite's uniform docs/src/adr layout (book/ and root-src/ books were moved
-# under docs/, and the playbook's adrs/ was renamed adr/, to make this uniform).
+# under docs/, to make this uniform).
 ADR_REL = {
     "assessments": "docs/src/adr",
     "adroit": "docs/src/adr",
@@ -1016,8 +991,8 @@ BADGED_APPS = {
     "conduit": ("conduit", ADR_REL["conduit"]),
     "tuesday": ("tuesday", ADR_REL["tuesday"]),
     "pulse": ("pulse", ADR_REL["pulse"]),
-    # "The playbook" retired with its product (ADR-0010, wave 3): the badge
-    # retired rather than transferring; starter content carries no rung.
+    # The retired template product carried the only self-serve rung; the
+    # badge retired with it (ADR-0010) and starter content carries no rung.
 }
 
 BADGE_PAGES = [
@@ -1129,9 +1104,6 @@ def check_badges() -> None:
 # 5. Evidence-ledger discipline — per-run pages + the per-iteration changelog
 # ---------------------------------------------------------------------------
 
-RUN_POINTER = re.compile(r"docs/iteration-(\d+)/run-(\d+)")
-
-
 def check_ledger() -> None:
     summary = (BOOK / "src" / "SUMMARY.md").read_text()
     changelog = BOOK / "src" / "changelog.md"
@@ -1147,61 +1119,19 @@ def check_ledger() -> None:
             f"{'(./changelog.md)' in summary}",
         )
         return
-    changelog_text = changelog.read_text()
-
-    # Evidence accumulates as per-run pages: each one is listed in SUMMARY,
-    # states a captured-run pointer that resolves in the workspace ledger,
-    # and has a matching per-iteration changelog entry.
-    run_pages = sorted((BOOK / "src" / "loop" / "dogfood").glob("run-*.md"))
-    if not run_pages:
+    # The ledger-reset state (2026-07-28, the harness-first pivot): no
+    # per-run evidence pages remain — capstone history lives in git — so
+    # the ledger check is exactly the first-class-changelog assertion above,
+    # plus a guard that no orphaned run page reappears without its ledger
+    # discipline coming back with it.
+    stray = sorted((BOOK / "src" / "loop").glob("dogfood*"))
+    if stray:
         fail(
-            "the dogfood evidence accumulates as per-run pages",
-            "src/loop/dogfood/ (expected run-N.md pages)",
-            "no run-*.md page exists",
+            "the ledger reset removed the per-run evidence apparatus",
+            "src/loop/ (expected no dogfood pages)",
+            f"found {[p.name for p in stray]} — restore the run-page checks"
+            " in this gate if the apparatus returns",
         )
-    for page in run_pages:
-        rel = f"src/loop/dogfood/{page.name}"
-        if f"(./loop/dogfood/{page.name})" in summary:
-            ok(f"SUMMARY lists the per-run evidence page {page.name}")
-        else:
-            fail(
-                f"every per-run evidence page is first-class ({page.name})",
-                f"{rel} exists",
-                f"src/SUMMARY.md has no entry linking ./loop/dogfood/{page.name}",
-            )
-        m = RUN_POINTER.search(page.read_text())
-        if not m:
-            fail(
-                f"{page.name} states its captured-run pointer",
-                rel,
-                "no docs/iteration-N/run-N pointer anywhere in the page",
-            )
-            continue
-        # The ledger is local-only by policy: env -> sibling -> skip, no clone.
-        docs = resolve_docs()
-        run_dir = (docs / f"iteration-{m.group(1)}" / f"run-{m.group(2)}") if docs else None
-        if docs is None:
-            skip(
-                f"{page.name} run pointer {m.group(0)}",
-                "the docs ledger is not checked out (set COMO_DOCS_DIR or"
-                " check out ../docs — it is local-only by policy, never cloned)",
-            )
-        elif run_dir.is_dir():
-            ok(f"{page.name} run pointer {m.group(0)} resolves in the workspace ledger")
-        else:
-            fail(
-                f"{page.name} points at captured run evidence",
-                f"{rel} cites {m.group(0)}",
-                f"{run_dir} does not exist",
-            )
-        if re.search(rf"^## Iteration {m.group(1)}\b", changelog_text, re.M):
-            ok(f"changelog has an Iteration {m.group(1)} entry for {page.name}")
-        else:
-            fail(
-                f"every captured run has a per-iteration changelog entry ({page.name})",
-                rel,
-                f"src/changelog.md has no '## Iteration {m.group(1)}' heading",
-            )
 
 
 # ---------------------------------------------------------------------------

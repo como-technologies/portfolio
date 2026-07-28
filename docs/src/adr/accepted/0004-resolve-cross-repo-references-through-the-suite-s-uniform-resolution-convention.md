@@ -43,7 +43,7 @@ sibling.
   `COMO_OFFLINE=1` honored, and a populated cache never auto-updated.
 - The docs evidence ledger is local-only by explicit policy (no remote,
   ever) and must never grow a clone leg.
-- Repos without a public remote today (conduit, playbook) must keep
+- Repos without a public remote today must keep
   exactly their current skip/notice behavior until the owner pushes them.
 
 ## Considered Options
@@ -88,7 +88,7 @@ identically in each adopting repo:
 > local-only by policy, so references to it stop at skip-with-notice.
 > Resolvers only clone and fetch: they never push, never add the cache as a
 > remote, and never carry credentials in URLs. Repos without a public
-> remote today (conduit, playbook, docs) degrade to exactly the
+> remote today degrade to exactly the
 > skip-with-notice behavior they produce now, so nothing breaks before the
 > owner pushes them.
 
@@ -130,7 +130,7 @@ table are deliberate, reviewed edits — like conduit's `adroit.rev`.
 - The `PINS` table is one more thing to bump deliberately; a forgotten
   bump validates yesterday's contract (loudly, via the drift flag, but
   still).
-- The clone legs for conduit and playbook ship untested against a real
+- The clone legs for then-unpublished repos ship untested against a real
   remote (none exists yet); they are exercised only via local `file://`
   mirrors until the owner pushes those repos.
 

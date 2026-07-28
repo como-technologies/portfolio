@@ -10,9 +10,8 @@ merge — and deploy stays a human gate outside the loop.
 ## conduit
 
 **Maturity: dogfooding** — exercised on Como's own work every iteration;
-build from source. Moved up from spike at the iteration-2 close; the
-gating evidence is the two captured capstone runs,
-[run 1](./dogfood/run-1.md) and [run 2](./dogfood/run-2.md).
+build from source. The gating evidence lives in the conduit repo: the
+rehearsed customer-demo kit and the validated end-to-end acceptance run.
 
 **What it is.** A forge-neutral, model-neutral, cloud-neutral agentic
 development harness. conduit is *not* an agent: it stands on commodity
@@ -23,12 +22,11 @@ by a shared conformance suite and a byte-identical three-way transcript
 diff — forge-neutrality proven at N=3: the GitLab adapter passed the same
 suite and diff that gated the claim at N=2 (conduit ADR-0016; GitLab
 mutations are dry-run by construction, like GitHub's — Gitea remains the
-live lifecycle host). The
-iteration-1 spike's acceptance run drove the full loop against a throwaway
-local Gitea — reading conduit's own accepted ADRs and working them on
-conduit's own repo — with GitHub mutations dry-run by construction;
-iteration 2 ran the loop again on the playbook corpus, restart proof
-in-thread, plus a live-engine encore whose merged PR was harvested back.
+live lifecycle host). The validated acceptance run drives the full loop
+against a throwaway local Gitea — reading accepted ADRs and working them
+as pull requests — with GitHub mutations dry-run by construction, restart
+proof included: killed mid-Coding, it resumes with no duplicate forge
+actions.
 
 **How it enters the loop.** conduit consumes adroit's read slice — the only
 adroit subcommands it ever invokes are `manifest`, `list`, `show`, and
@@ -68,18 +66,14 @@ The effort label is **final at merge** — that is the moment tuesday reads
 it. How tuesday allocates from these markers, including the two accepted
 caveats, is described with [Measure](./measure.md#tuesday).
 
-**Where its evidence lives.** In this book: the per-run pages
-[run 1](./dogfood/run-1.md) and [run 2](./dogfood/run-2.md) — six-check
-`verify` passes, byte-identical forge-neutral transcripts, a
-kill-mid-Coding restart with no duplicate forge actions, and run 2's
-live-engine encore. In the conduit repo's book: `docs/src/usage/demo.md` —
-the validated end-to-end acceptance run; `docs/src/usage/customer-demo.md`
-— the narrated customer demo, backed by the `demo/kit/` scripts
-(one-command stand-up, five evidence-printing beats, teardown; both
-rehearsals committed verbatim, per its ADR-0015);
-`docs/src/dev/forge-contract.md` (the conformance suite all three adapters
-must pass); and `docs/src/dev/follow-ups.md` — the spike's seven recorded
-residuals, closed as of iteration 2 (six done, one retired by ADR).
+**Where its evidence lives.** In the conduit repo's book:
+`docs/src/usage/demo.md` — the validated end-to-end acceptance run
+(six-check `verify` passes, byte-identical forge-neutral transcripts, the
+kill-mid-Coding restart); `docs/src/usage/customer-demo.md` — the narrated
+customer demo, backed by the `demo/kit/` scripts (one-command stand-up,
+five evidence-printing beats, teardown; rehearsals committed per its
+ADR-0015); and `docs/src/dev/forge-contract.md` (the conformance suite all
+three adapters must pass).
 
 ## Where services wrap it
 

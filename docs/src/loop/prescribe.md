@@ -108,6 +108,4 @@ without re-keying.
 **Where its evidence lives.** In the llm-wiki repo: `kit/starter/README.md`
 records the rehearsed bootstrap (seed 16, strict ingest, `adroit check`
 clean, lint at zero errors) and is re-rehearsed whenever the content
-changes. The template repository that formerly shipped this corpus is
-archived — the retirement story is on the
-[starter content](../products/starter-content.md) page.
+changes.

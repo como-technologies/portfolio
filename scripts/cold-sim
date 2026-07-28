@@ -26,12 +26,9 @@ Two clone sources:
       (COMO_GIT_BASE in the CALLER's environment overrides that base for
       the harness's own clone step only; children still run scrubbed).
 
-The playbook is published (como-technologies/playbook, 2026-07-05), so
-the sandbox clones it like every other suite repo — a stranger's checkout
-has it now — and ring 3's demo-up must FULLY stand up; the old documented
-stop at beat [1/6] is a FAIL. The ../docs evidence ledger remains
-local-only by policy: absent by default, --with-docs opts it in from the
-LOCAL sibling. (--with-playbook is kept as a no-op for compatibility.)
+The demo's client corpus builds from llm-wiki's starter content, so the
+sandbox clones llm-wiki like every other suite repo and ring 3's demo-up
+must fully stand up — a resolution failure is a FAIL.
 
 What the sandbox cannot simulate it records instead of faking: whether
 ollama is on PATH and whether the docker daemon is reachable are printed
@@ -74,8 +71,7 @@ SIBLINGS = REPO.parent  # sibling working copies live beside portfolio
 # Ring-1 order is deliberate: adroit first, so the later repos' adr-check
 # legs can find a freshly built sibling ../adroit inside the sandbox.
 APP_REPOS = ["adroit", "assessments", "conduit", "tuesday", "pulse"]
-SUITE = APP_REPOS + ["portfolio", "playbook"]  # playbook published 2026-07-05
-LOCAL_ONLY = ["docs"]  # no public remote, by policy — opt-in, local source
+SUITE = APP_REPOS + ["llm-wiki", "portfolio"]  # llm-wiki carries the kit + starter content
 
 RING3_LEGS = ["preflight", "init-adroit", "demo-up", "demo-down"]
 RING3_CMDS = {
@@ -88,15 +84,6 @@ LEG_TIMEOUT = {"preflight": 600, "init-adroit": 3600, "demo-up": 3600, "demo-dow
 CI_TIMEOUT = 3600  # per `just ci` leg — cold builds are slow, hangs are red
 SOAK_TIMEOUT = 1800
 
-# The documented ring-3 stop in a no-playbook sandbox, pinned to the kit's
-# ACTUAL text (conduit demo/kit/demo-up step [1/6] + lib.sh require_repo).
-# If conduit rewords the notice, this assertion goes red — update both
-# together, exactly like a verify-claims pin.
-BEAT1_MARKER = "[1/6] resolving cross-repo dependencies"
-PLAYBOOK_STOP = (
-    "playbook is required for this beat. Provide COMO_PLAYBOOK_DIR,"
-    " a sibling ../playbook checkout, or COMO_GIT_BASE for the clone cache."
-)
 PREFLIGHT_OK = "PREFLIGHT OK"
 PREFLIGHT_INCOMPLETE = "PREFLIGHT INCOMPLETE"
 
@@ -260,16 +247,13 @@ def classify_preflight(code: int | None, text: str, docker_ok: bool) -> str:
     return "FAIL"
 
 
-def classify_demo_up(code: int | None, text: str, docker_ok: bool, with_playbook: bool) -> str:
+def classify_demo_up(code: int | None, text: str, docker_ok: bool) -> str:
     if code == 0:
-        return "PASS"  # full stand-up (playbook resolved, forge up)
-    if BEAT1_MARKER in text and PLAYBOOK_STOP in text:
-        # The playbook is published and the sandbox clones it; hitting the
-        # old [1/6] stop means resolution regressed. Real FAIL, no longer
-        # PASS-AS-DOCUMENTED.
-        return "FAIL"
+        return "PASS"  # full stand-up (client corpus resolved, forge up)
     if not docker_ok:
         return "ENV-LIMITED"
+    # A dependency-resolution stop at [1/6] (llm-wiki absent) or any later
+    # failure is real — the sandbox clones every suite repo.
     return "FAIL"
 
 
@@ -279,7 +263,6 @@ def run_ring3(
     env: dict[str, str],
     legs: list[str],
     docker_ok: bool,
-    with_playbook: bool,
 ) -> None:
     conduit = sandbox / "conduit"
     for leg in RING3_LEGS:
@@ -292,7 +275,7 @@ def run_ring3(
         if leg == "preflight":
             result = classify_preflight(code, text, docker_ok)
         elif leg == "demo-up":
-            result = classify_demo_up(code, text, docker_ok, with_playbook)
+            result = classify_demo_up(code, text, docker_ok)
         elif code == 0:
             result = "PASS"
         else:
@@ -333,9 +316,6 @@ def parse_args() -> argparse.Namespace:
         choices=RING3_LEGS,
         help="limit ring 3 to these legs (repeatable; always run in runbook order)",
     )
-    p.add_argument("--with-playbook", action="store_true",
-                   help="no-op (kept for compatibility: the published playbook is always cloned)")
-    p.add_argument("--with-docs", action="store_true", help="clone the local docs ledger sibling in")
     p.add_argument("--soak", type=int, default=0, metavar="N", help="N extra conduit test-suite runs")
     return p.parse_args()
 
@@ -365,11 +345,9 @@ def main() -> int:
     print(f"cold-sim: FORGE_PORT={env['FORGE_PORT']} (free host port for the throwaway forge)")
 
     github_base = os.environ.get("COMO_GIT_BASE", "https://github.com/como-technologies").rstrip("/")
-    wanted = list(SUITE)  # includes playbook (published; --with-playbook is a no-op)
-    if args.with_docs:
-        wanted.append("docs")
+    wanted = list(SUITE)
     for name in wanted:
-        if args.source == "local" or name in LOCAL_ONLY:
+        if args.source == "local":
             url = f"file://{SIBLINGS / name}"
             if not (SIBLINGS / name).is_dir() and not (sandbox / name).is_dir():
                 print(f"ERROR: no local sibling {SIBLINGS / name} to clone {name} from")
@@ -396,7 +374,7 @@ def main() -> int:
     if args.ring in (None, 2):
         ring2_result = run_ring2(sandbox, logs, env)
     if args.ring in (None, 3):
-        run_ring3(sandbox, logs, env, args.leg or RING3_LEGS, docker_ok, args.with_playbook)
+        run_ring3(sandbox, logs, env, args.leg or RING3_LEGS, docker_ok)
     soak_result = run_soak(sandbox, logs, env, args.soak) if args.soak > 0 else None
 
     print()
