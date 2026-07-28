@@ -11,7 +11,9 @@ uniform convention (each repo's ADR records it): an explicit `COMO_<REPO>_DIR`
 env override, else a sibling checkout `../<repo>`, else a pinned git clone into
 a gitignored cache. The simplest layout is all repos checked out under one
 parent (`assessments`, `adroit`, `conduit`, `tuesday`, `pulse`, `playbook`,
-`portfolio`) — then everything resolves with no configuration. Each app's ADR
+`llm-wiki`, `portfolio`) — then everything resolves with no configuration
+(`llm-wiki`, the KB substrate, resolves like any other sibling and builds
+from source at HEAD per this book's ADR-0009). Each app's ADR
 corpus ships **inside its own published mdbook source** at the suite's uniform
 `docs/src/adr/` path, so the truthfulness gate in Ring 2 finds it in
 any checkout — no separate corpus download.

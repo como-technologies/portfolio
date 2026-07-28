@@ -1,7 +1,7 @@
 # Adopt
 
-This is where the playbook meets your teams, your code, and your platforms —
-and historically where modernization programs stall. The portfolio's answer
+This is where the knowledge base's decisions meet your teams, your code, and
+your platforms — and historically where modernization programs stall. The portfolio's answer
 is an engine plus a services wrapper: conduit turns accepted decisions into
 reviewable pull requests inside the team's own forge, and Como's services
 carry the enablement around it. Humans hold every gate — scope, review,

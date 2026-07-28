@@ -14,7 +14,7 @@ anything.
 
 **Tools.** Two, with different maturity — said plainly:
 
-- [tuesday](../loop/measure.md) *(dogfooding)* — team capacity analysis from
+- [tuesday](../loop/measure.md) *(SME-usable)* — team capacity analysis from
   merged-PR effort. The headless CLI emits the canonical monthly report
   JSON, including the per-decision rollup: hours attributed to the ADR that
   prompted the work.

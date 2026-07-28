@@ -20,7 +20,7 @@
 
 - [Overview](./services/README.md)
   - [Assessment engagement](./services/assessment.md)
-  - [Playbook authoring](./services/playbook-authoring.md)
+  - [Knowledge base authoring](./services/kb-authoring.md)
   - [Adoption enablement](./services/adoption-enablement.md)
   - [Agentic delivery (pilot)](./services/agentic-delivery.md)
   - [Measurement setup](./services/measurement-setup.md)

@@ -6,6 +6,11 @@ connects Assess to Measure. Every engagement runs the full loop by default,
 but each service is available on its own for clients who already have their
 own shape.
 
+The tools carry AI assistance at every stage of the loop, behind mechanical
+gates; the services carry the people. Today the guided loop is driven by
+Como with the client's SMEs alongside — the maturity ladder's SME-usable →
+self-serve climb is the honest record of it moving into client hands.
+
 ## The engagement arc
 
 The services are the loop, sold stage by stage. Each stage's service
@@ -15,7 +20,7 @@ people belong.
 
 ```mermaid
 flowchart LR
-    A["<b>Assessment<br/>engagement</b><br/><i>Assess</i>"] --> P["<b>Playbook<br/>authoring</b><br/><i>Prescribe</i>"]
+    A["<b>Assessment<br/>engagement</b><br/><i>Assess</i>"] --> P["<b>Knowledge base<br/>authoring</b><br/><i>Prescribe</i>"]
     P --> E["<b>Adoption<br/>enablement</b><br/><i>Adopt</i>"]
     P --> G["<b>Agentic delivery</b><br/>(pilot)<br/><i>Adopt</i>"]
     E --> M["<b>Measurement<br/>setup</b><br/><i>Measure</i>"]
@@ -26,7 +31,7 @@ flowchart LR
 | Service | Loop stage | Artifact out |
 |---|---|---|
 | [Assessment engagement](./assessment.md) | [Assess](../loop/assess.md) | a schema-validated maturity assessment |
-| [Playbook authoring](./playbook-authoring.md) | [Prescribe](../loop/prescribe.md) | a living [playbook](../products/playbook.md) of accepted decisions and guides |
+| [Knowledge base authoring](./kb-authoring.md) | [Prescribe](../loop/prescribe.md) | a living [knowledge base](../loop/prescribe.md) of accepted decisions and guides |
 | [Adoption enablement](./adoption-enablement.md) | [Adopt](../loop/adopt.md) | decisions in daily practice |
 | [Agentic delivery (pilot)](./agentic-delivery.md) | [Adopt](../loop/adopt.md) | merged, decision-tagged pull requests |
 | [Measurement setup](./measurement-setup.md) | [Measure](../loop/measure.md) | machine-readable adoption evidence |

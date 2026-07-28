@@ -1,8 +1,10 @@
 # Prescribe
 
-The assessment drives an opinionated playbook: *decisions* recorded as ADRs
-(Architecture Decision Records) and *guidance* as step-by-step guides. The
-stage's tool is adroit; its artifact is the playbook. The hand-off in is
+The assessment drives an opinionated knowledge base: *decisions* recorded as
+ADRs (Architecture Decision Records) and *guidance* as step-by-step guides,
+held as typed, schema-validated pages in a KB space (the
+[Como KB specification](../kb-spec.md)). The stage's tool is adroit; its
+artifact is the decision corpus in the knowledge base. The hand-off in is
 mechanical — `adroit import --from-assessment` seeds Proposed ADRs straight
 from the Assess export — and the hand-off out is machine-readable: accepted
 decisions and their stored implementation plans, served as JSON to the Adopt
@@ -17,21 +19,28 @@ alongside. The gating evidence, in the adroit repo: the v0.2.0 tagged
 release (its ADR-0012 release discipline, changelog chapter in the book);
 the recorded decision that build-from-source IS the install path at this
 rung (its ADR-0013, published distribution retired for suite-done); the
-19-ADR self-managed corpus (`adroit check` clean); and three full-loop
+20-ADR self-managed corpus (`adroit check` clean); and three full-loop
 runs of live `import --from-assessment --ai` plus stored-plan determinism
 — plans persist inside the ADR document and are read back provider-free,
 byte-identically. Build from source remains the install path.
 
 **What it is.** A Rust CLI for authoring, linking, and managing ADRs: one
 binary with three surfaces (CLI, optional TUI, read-only web dashboard),
-AI authoring assists (interview drafting, implementation planning, corpus
-Q&A) on Anthropic or local ollama, forge/tracker integration, and a
-machine-readable agent seam — `manifest`, `-o json` on every read verb, and
-a read-only MCP projection.
+AI authoring assists at every step (interview drafting, instruction-driven
+revision, implementation planning, corpus Q&A) on Anthropic or local
+ollama, forge/tracker integration, and a machine-readable agent seam —
+`manifest`, `-o json` on every read verb, and a read-only MCP projection.
+Since its ADR-0020, adroit operates **exclusively against a KB space**:
+`--dir` names a space (a directory holding `wiki.toml`), decision pages
+live in the space's `wiki/decisions/`, and the space's admission hooks —
+strict schema validation on every commit — sit under every write. One
+command, `adroit seed --from <legacy-dir>`, bootstraps an existing ADR
+corpus into a fresh space.
 
 **How it enters the loop.** adroit consumes the Assess export and produces
 the decision corpus the Adopt stage works from. The write side — assessment
-to accepted, planned decision:
+to accepted, planned decision, with an AI assist available at each step and
+a mechanical gate behind each one:
 
 ```sh
 adroit import --from-assessment export.yaml --ai -o json  # seed Proposed ADRs
@@ -59,7 +68,10 @@ sha256 on consecutive reads).
 on a live local model, re-runnable as `just adopt-slice`. And across the
 portfolio: adroit manages the ADR corpora of conduit, pulse, tuesday, the
 playbook, assessments — and this book's own `adr/`, where the decisions
-behind this restructure are recorded.
+behind this restructure are recorded. Every one of those repos' CI gates
+seeds its committed corpus into an ephemeral KB space and validates it
+there on every run (this book's ADR-0009) — the KB machinery is exercised
+continuously, not demonstrated once.
 
 ## The playbook
 
@@ -70,28 +82,36 @@ Scoped by playbook ADR-0014: self-serve covers the content product, adroit
 is recommended-not-required; the corpus ships an 11-record
 Proposed starter backlog beyond the five accepted worked examples.
 
-**What it is.** The playbook is the Prescribe artifact: an adroit-managed
-ADR corpus plus guides, published as a self-hosted static site (mdBook).
-The portfolio dogfoods the pattern on its own generic playbook repo — five
-accepted engineering ADRs (trunk-based development, ADR governance,
-dependency pinning and audit, a shared glossary, automated testing), three
-of them carrying stored implementation plans. [palette-playbook](../products/README.md), the
-client-delivered instance of the same pattern, is described with the
-products.
+**What it is.** The playbook is the Prescribe stage's published content
+product: an adroit-managed ADR corpus plus guides, published as a
+self-hosted static site (mdBook). The corpus is canonical content in its
+repo of record; wherever a tool needs to operate on it, it is seeded into
+a KB space first (this book's ADR-0009 — spaces are derived, disposable,
+never the source of truth). The portfolio dogfoods the pattern on its own
+generic playbook repo — five accepted engineering ADRs (trunk-based
+development, ADR governance, dependency pinning and audit, a shared
+glossary, automated testing), three of them carrying stored implementation
+plans.
 
 **How it enters the loop.** A playbook's accepted ADRs are not just
 documentation — they are the Adopt stage's work queue. The corpus is
 consumed entirely over adroit's CLI, no scraping and no human in the read
-path:
+path — stood up in a space, then read:
 
 ```sh
-ADROIT_DIR=src/adrs adroit list --status accepted -o json   # enumerate the queue
-ADROIT_DIR=src/adrs adroit show 4 -o json                   # read one decision
-ADROIT_DIR=src/adrs adroit plan 4 -o json                   # read its stored plan
+SPACE=$(mktemp -d)
+printf 'name = "adrs"\n' > "$SPACE/wiki.toml" && mkdir -p "$SPACE/wiki/decisions"
+adroit seed --from docs/src/adr --dir "$SPACE"              # corpus -> KB space
+ADROIT_DIR=$SPACE adroit list --status accepted -o json     # enumerate the queue
+ADROIT_DIR=$SPACE adroit show 4 -o json                     # read one decision
+ADROIT_DIR=$SPACE adroit plan 4 -o json                     # read its stored plan
 ```
 
 **Where its evidence lives.** In the playbook repo:
-`src/guides/adopt-read-path.md` documents the Adopt read path with JSON
+`docs/src/guides/adopt-read-path.md` documents the Adopt read path with JSON
 captured against that very corpus, and the stored plans live inside the
-accepted ADR documents under `src/adrs/accepted/`. The repo's CI gate runs
-the corpus check and a banned-terms scan on every build.
+accepted ADR documents under `docs/src/adr/accepted/`. The repo's CI gate runs
+the corpus check and a banned-terms scan on every build. The published
+template still pins adroit at v0.2.0 (pre-KB-cutover) by its own recorded
+resolution chain; moving it to the seed-into-a-space gate is a coming
+wave, stated here so the pin isn't mistaken for drift.

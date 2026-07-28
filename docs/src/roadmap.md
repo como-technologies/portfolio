@@ -1,10 +1,10 @@
 # Roadmap
 
-A Como engagement is a four-stage loop. Each stage produces an artifact that the next stage consumes. Each stage has purpose-built tooling in the portfolio. And the last stage feeds back into the first — because modernization is a cycle, not a project.
+A Como engagement is a four-stage loop. Each stage produces an artifact that the next stage consumes. Each stage has purpose-built tooling in the portfolio, with AI assistance at every step and a mechanical gate behind every AI step. And the last stage feeds back into the first — because modernization is a cycle, not a project.
 
 ```mermaid
 flowchart LR
-    A["<b>Assess</b><br/>assessments"] --> P["<b>Prescribe</b><br/>palette-playbook<br/>+ adroit"]
+    A["<b>Assess</b><br/>assessments"] --> P["<b>Prescribe</b><br/>adroit<br/>+ the knowledge base"]
     P --> D["<b>Adopt</b><br/>conduit<br/>+ services"]
     D --> M["<b>Measure</b><br/>pulse + tuesday"]
     M -.re-assess.-> A
@@ -18,15 +18,15 @@ flowchart LR
 
 ## 2. Prescribe
 
-**What happens.** The assessment drives an opinionated playbook. The playbook captures *decisions* (as ADRs — Architecture Decision Records) and *guidance* (as step-by-step guides with worked examples). Teams use [adroit](./loop/prescribe.md) to author and link the ADRs — and `adroit import --from-assessment` mechanically seeds Proposed ADRs straight from the assessment export, so the hand-off is a seam, not a re-keying exercise. [palette-playbook](./products/README.md) is a concrete example of the format, deployed as a self-hosted static site.
+**What happens.** The assessment drives an opinionated knowledge base: *decisions* (as ADRs — Architecture Decision Records) and *guidance* (as step-by-step guides), held as typed, schema-validated pages. Teams use [adroit](./loop/prescribe.md) to author and link the decisions — `adroit import --from-assessment` mechanically seeds Proposed ADRs straight from the assessment export, so the hand-off is a seam, not a re-keying exercise, and AI assists draft, revise, plan, and answer questions at every step while strict admission validation gates every write. adroit operates exclusively against KB spaces (its ADR-0020).
 
-**What you get.** A living playbook tailored to your context — opinionated where you need a jumpstart, flexible where you have your own shape. Hosted where your teams already work.
+**What you get.** A living knowledge base tailored to your context — opinionated where you need a jumpstart, flexible where you have your own shape — published to your teams as a static site ([the playbook](./products/playbook.md) is the ready-to-adopt pattern) and machine-readable to every downstream stage.
 
 ## 3. Adopt
 
-**What happens.** This is where the playbook meets your teams, your code, and your platforms. [conduit](./loop/adopt.md) *(spike complete)* is the Adopt-stage engine: it reads an accepted ADR and its stored implementation plan via `plan -o json` — over adroit's manifest / `-o json` seam, not by scraping prose — and drives an agent to turn each decision into issues and reviewable pull requests inside the team's *own* forge, model, and cloud, with humans keeping the gates (scope, review, merge). The spike proved the full loop end to end on a throwaway local forge; the recorded follow-ups gate production use. Como's [services](./services/README.md) wrap it: pairing sessions, enablement, incremental rollout, and the occasional hard conversation with a stakeholder who'd rather keep the status quo.
+**What happens.** This is where the decisions meet your teams, your code, and your platforms. [conduit](./loop/adopt.md) *(spike complete)* is the Adopt-stage engine: it reads an accepted ADR and its stored implementation plan via `plan -o json` — over adroit's manifest / `-o json` seam, not by scraping prose — and drives an agent to turn each decision into issues and reviewable pull requests inside the team's *own* forge, model, and cloud, with humans keeping the gates (scope, review, merge). The spike proved the full loop end to end on a throwaway local forge; the recorded follow-ups gate production use. Como's [services](./services/README.md) wrap it: pairing sessions, enablement, incremental rollout, and the occasional hard conversation with a stakeholder who'd rather keep the status quo.
 
-**What you get.** Measurable adoption, not a shelf-ware playbook. conduit tags each PR with the ADR it implements — machine-verified by `conduit verify` in the spike's captured run — so the effort [tuesday](./loop/measure.md) measures traces back to the decision that prompted it: the thread carried stage to stage (Prescribe → Adopt → Measure), not a direct hand-off from adroit to tuesday. That closes the loop's weakest seam instead of leaving Adopt to human services alone.
+**What you get.** Measurable adoption, not shelf-ware guidance. conduit tags each PR with the ADR it implements — machine-verified by `conduit verify` in the spike's captured run — so the effort [tuesday](./loop/measure.md) measures traces back to the decision that prompted it: the thread carried stage to stage (Prescribe → Adopt → Measure), not a direct hand-off from adroit to tuesday. That closes the loop's weakest seam instead of leaving Adopt to human services alone.
 
 ## 4. Measure
 
@@ -37,6 +37,13 @@ flowchart LR
 
 **What you get.** Evidence, not vibes. And the next assessment's starting point.
 
+## Where this is going
+
+The knowledge base is AI-driven today at every seam where a tool writes to it — assessments and adroit put an assistant in the authoring loop, conduit puts an agent behind accepted decisions, and every AI output passes a deterministic validation gate before it lands. Two steps are future state, and we say so plainly:
+
+- **The librarian** — an AI head over the KB that files captured evidence, links concepts, refreshes derived pages, and flags contradictions against accepted decisions: the knowledge base organizing itself behind the same admission gates every tool obeys. It is specified ([the KB spec, Part I](./kb-spec.md#part-i--how-content-moves)) and not yet built.
+- **End-user hands.** Today the tools guide Como and the SMEs working alongside us through the loop; the trajectory — visible in the maturity ladder's SME-usable → self-serve climb — is the same guided loop driven by client teams themselves.
+
 ## Where services wrap the tools
 
-The tools, apps, and products in the portfolio are necessary but not sufficient on their own. What turns them into an engagement is Como's services layer — the consulting, facilitation, and enablement that knits the stages together. You can BYOx any single piece (bring your own assessment framework, your own playbook, your own measurement) and Como adapts around it. What you can't do is skip the thread itself.
+The tools, apps, and products in the portfolio are necessary but not sufficient on their own. What turns them into an engagement is Como's services layer — the consulting, facilitation, and enablement that knits the stages together. You can BYOx any single piece (bring your own assessment framework, your own knowledge base, your own measurement) and Como adapts around it. What you can't do is skip the thread itself.

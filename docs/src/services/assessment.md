@@ -13,7 +13,7 @@ engagement, the previous iteration's Measure artifacts — the capacity report
 and the sentiment aggregate — are the starting evidence, which is what makes
 the loop a loop.
 
-**Tool.** [assessments](../loop/assess.md) *(dogfooding)* — the AI-assisted
+**Tool.** [assessments](../loop/assess.md) *(SME-usable)* — the AI-assisted
 authoring environment. SMEs co-create the assessment through a guided
 five-phase workflow; the headless pipeline runs on a local model, so client
 material never has to leave client infrastructure.

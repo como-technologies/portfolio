@@ -1,7 +1,8 @@
 # The Como KB specification
 
-The knowledge base that makes the playbook evidenced: typed pages, stable
-identity, mechanical anti-rot, and a git-native admission model. Produced by
+The knowledge base that makes the portfolio's prescriptions evidenced:
+typed pages, stable identity, mechanical anti-rot, and a git-native
+admission model. Produced by
 the [kb-spike](https://github.com/como-technologies/kb-spike) evaluation
 (ten findings, each closed with live-verified evidence) and adopted by
 [ADR-0006](./adr/accepted/0006-adopt-llm-wiki-engine-como-fork-as-the-knowledge-base-substrate.md).
@@ -22,6 +23,8 @@ The mental model: **git history is the admission log. Validation is the
 pre-commit constraint. Everything downstream — the indexer, the LLM
 librarian — is a consumer of that log with a per-instance cursor, catching
 up idempotently.** The engine does zero inference; the librarian is a head.
+The indexer ships today; the librarian is future state, specified here and
+not yet built — every consumer that runs today is mechanical.
 
 ### Admission: two paths, one gate
 
@@ -147,8 +150,10 @@ Each contract cites its evidence in the spike's
   rival at the recommended weights); `spaces create` provisions both
   vocabularies into the space's `wiki.toml` (llm-wiki#14), and
   `config set search.status.<key>` adjusts them. Evidence: findings/issue-03.
-- Open sub-question, decided at adroit retrofit time: frontmatter as source
-  of truth vs projection, and whether the ADR body keeps `## Status`.
+- Resolved at the adroit retrofit (adroit ADR-0020): frontmatter is the
+  sole source of truth — the body is prose only, with no `## Status`
+  section; `status` serializes lowercase per the schema enum; the page
+  persists the ULID `id` and the head-owned `reference`.
 
 ### 5. Anti-rot / lint
 
@@ -221,6 +226,9 @@ Each contract cites its evidence in the spike's
   decision.
 - **The heads**: adroit, tuesday, pulse, and the librarian. Structured
   writers in; seam readers out — always against instances, via the seams.
+  Current state, plainly: adroit is retrofitted and KB-only today (its
+  ADR-0020); tuesday and pulse register their page types in coming waves;
+  the librarian is future state.
 
 Open product work:
 [llm-wiki issues](https://github.com/como-technologies/llm-wiki/issues).

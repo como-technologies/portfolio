@@ -1,6 +1,7 @@
 # How this book stays true
 
-This book describes six sibling repos that all move, and prose rots silently
+This book describes seven sibling repos that all move — the six apps and
+llm-wiki, the KB substrate — and prose rots silently
 when reality does. So the book's truthfulness is mechanical, not
 aspirational: a scripted gate, `scripts/verify-claims`, runs first in
 `just ci` and goes **red** when a sibling repo no longer matches what the

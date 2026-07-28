@@ -4,7 +4,10 @@ Adoption is observed, not assumed — on two axes. tuesday quantifies where
 engineering capacity actually goes and attributes it to the decisions that
 spent it; pulse captures the qualitative signal people won't volunteer in a
 town hall. Both produce machine-readable artifacts, because the loop's last
-hand-off is the next assessment's input.
+hand-off is the next assessment's input. Both are also named heads of the
+knowledge base — their report page types are specified in the
+[KB spec](../kb-spec.md); registering them there is a coming retrofit wave
+(future state — adroit's retrofit landed first).
 
 ## tuesday
 

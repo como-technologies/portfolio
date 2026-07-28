@@ -3,7 +3,7 @@
 The flagship: accepted decisions worked to merged pull requests inside your
 *own* forge by an agentic harness — with humans holding every gate. The
 engagement shape is simple to say out loud: pick N accepted decisions from
-the playbook; each one comes back as a reviewable, decision-tagged PR that
+the knowledge base; each one comes back as a reviewable, decision-tagged PR that
 your reviewer merges, or sends back, or rejects.
 
 **Honest tense first.** This is a capability Como is dogfooding, offered as
@@ -14,7 +14,7 @@ yet SME-usable. The pilot's promise is the loop you can watch run on
 Como's own repos today, applied to a bounded slice of yours.
 
 **Inputs.** Accepted ADRs carrying stored implementation plans — the output
-of [Playbook authoring](./playbook-authoring.md). conduit consumes them over
+of [Knowledge base authoring](./kb-authoring.md). conduit consumes them over
 adroit's machine seam (`list`, `show`, `plan`, all `-o json`); it never
 authors, edits, or transitions a decision. If it isn't an accepted ADR, it
 isn't in scope — the engine enforces that itself.

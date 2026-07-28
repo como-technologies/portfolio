@@ -1,19 +1,20 @@
 # Adoption enablement
 
-Pairing, workshops, and incremental rollout that get the playbook into daily
-practice. This is where most modernization programs stall — the playbook is
-accepted, then nothing changes — and it's where Como spends the most effort.
+Pairing, workshops, and incremental rollout that get the knowledge base's
+decisions into daily practice. This is where most modernization programs
+stall — the decisions are accepted, then nothing changes — and it's where
+Como spends the most effort.
 The service is the human side of the loop's [Adopt](../loop/adopt.md) stage.
 
-**Inputs.** An accepted playbook (from
-[Playbook authoring](./playbook-authoring.md) or your own), and the team's
+**Inputs.** A knowledge base of accepted decisions (from
+[Knowledge base authoring](./kb-authoring.md) or your own), and the team's
 current working practice — the gap between the two is the engagement.
 
 **Tool.** This service is deliberately human-led: pairing sessions,
 workshops, rollout sequencing, and the occasional hard conversation with a
 stakeholder who'd rather keep the status quo. For decision-shaped work that
 an engine can carry, the engine exists:
-[conduit](../loop/adopt.md) *(spike)* powers the
+[conduit](../loop/adopt.md) *(dogfooding)* powers the
 [Agentic delivery](./agentic-delivery.md) pilot — the two services share the
 stage and compose.
 
