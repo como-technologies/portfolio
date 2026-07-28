@@ -29,7 +29,10 @@ binary with three surfaces (CLI, optional TUI, read-only web dashboard),
 AI authoring assists at every step (interview drafting, instruction-driven
 revision, implementation planning, corpus Q&A) on Anthropic or local
 ollama, forge/tracker integration, and a machine-readable agent seam —
-`manifest`, `-o json` on every read verb, and a read-only MCP projection.
+`manifest`, `-o json` on every read verb, and a guarded MCP projection:
+read-only by default, with an opt-in write slice for MCP-only harnesses
+(adroit ADR-0021 — destructive-annotated tools the human approves per
+call, the same admission gates underneath).
 Since its ADR-0020, adroit operates **exclusively against a KB space**:
 `--dir` names a space (a directory holding `wiki.toml`), decision pages
 live in the space's `wiki/decisions/`, and the space's admission hooks —
