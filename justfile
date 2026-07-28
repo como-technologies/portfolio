@@ -59,7 +59,14 @@ adr-check:
         fi
     fi
     if [ -n "${bin}" ]; then
-        "${bin}" check --dir docs/src/adr
+        # KB-only adroit (adroit ADR-0020): the gate seeds the committed
+        # corpus into an ephemeral space and validates it there.
+        tmp="$(mktemp -d)"
+        trap 'rm -rf "$tmp"' EXIT
+        printf 'name = "adrs"\n' > "$tmp/wiki.toml"
+        mkdir -p "$tmp/wiki/decisions"
+        "${bin}" seed --from docs/src/adr --dir "$tmp"
+        "${bin}" check --dir "$tmp"
     else
         echo "skip: adroit not found (set ADROIT_BIN, build ../adroit, install adroit on PATH, or set COMO_GIT_BASE to arm the .como/tools cached install)"
     fi

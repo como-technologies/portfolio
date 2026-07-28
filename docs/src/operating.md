@@ -58,9 +58,12 @@ just ci      # fmt + clippy + tests + book build + ADR-corpus check, per repo
 ```
 
 Every repo's gate validates its ADR corpus: the five Rust apps each carry an
-`adr-check` leg in `just ci`, and the playbook — a corpus, not a Rust app —
-gates its content scan, corpus/index validation (`check`), and book build
-instead of code legs. Green in all of them means each app is internally
+`adr-check` leg in `just ci` — since adroit went KB-only (adroit ADR-0020,
+portfolio ADR-0009) that leg seeds the committed corpus into an ephemeral KB
+space and validates it there, so the gate also exercises the KB machinery on
+every run — and the playbook — a corpus, not a Rust app — gates its content
+scan, corpus/index validation (`check`), and book build instead of code
+legs. Green in all of them means each app is internally
 sound — the Rust apps formatted, lint-clean, and tested; every mdbook builds;
 every corpus validates. This is the per-app truth check and the fastest
 signal.
