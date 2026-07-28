@@ -105,6 +105,12 @@ export-seam claims now landed in-engine, §8 instance lifecycle);
 portfolio#6 deferred with a pointer here. llm-wiki: #14 items 1–2 shipped
 on `main` (schema library in-engine; `spaces create` provisions hooks,
 strict defaults, and search weights); items 3–4 rescoped per this record.
-Next: portfolio grows `just init` (ephemeral space from the sibling or
-clone-cache `llm-wiki` at HEAD) and the operating.md ingest + round-trip
-gate; suite tooling for this lands in Rust (the suite's no-Python rule).
+Scope correction (same day): "backed by a KB" means each tool is
+**refactored to work against** a KB — never that portfolio doc content
+migrates into one. operating.md is documentation of the DX only; the
+earlier "operating.md ingest + round-trip gate" idea is dead. Next: the
+head retrofits, adroit first (adroit ADR-0020: KB-only operation, the
+`seed` bootstrap for legacy corpora, per-tool test data), then the other
+tools; each consuming repo's `adr-check` leg moves to bootstrap-a-space in
+its own wave; operating.md updates as the runbook's reality changes. Suite
+tooling lands in Rust (the suite's no-Python rule).
