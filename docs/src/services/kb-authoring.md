@@ -11,7 +11,8 @@ lands in the KB in the right shape. Today — said plainly — Como drives
 that loop with your SMEs alongside; the authoring kit that hands it to
 your harness is in flight
 ([portfolio#7](https://github.com/como-technologies/portfolio/issues/7)),
-and [the playbook](../products/playbook.md) provides starter content.
+and the shipped [starter content](../products/starter-content.md) means
+day one starts from a working corpus.
 
 **Inputs.** The assessment export from an
 [Assessment engagement](./assessment.md) (or your own equivalent — the seam

@@ -45,7 +45,10 @@ notice that names the knob**, never silently:
   the per-run pages and `just refresh-evidence` read — so the run-evidence
   claims below verify only where the ledger is checked out;
 - the **playbook** corpus the Adopt demo seeds onto the throwaway forge (the
-  fictional client's decisions). It is published at
+  fictional client's decisions — a legacy corpus, which is exactly what a
+  real client brings). The repo is **archived** (read-only since
+  2026-07-28; the template product retired to the kit's starter content by
+  ADR-0010) but stays clonable at
   [como-technologies/playbook](https://github.com/como-technologies/playbook),
   so a sibling `../playbook` clone resolves it like any other suite repo;
   `COMO_PLAYBOOK_DIR` and `COMO_GIT_BASE` / `COMO_PLAYBOOK_GIT` remain as
@@ -184,11 +187,12 @@ automation; the current per-repo procedure lives in the workspace ledger at
 `docs/iteration-4/owner-actions.md`.
 
 The formerly outstanding actions are done: the pinned adroit rev in
-`conduit/adroit.rev` resolves from the adroit remote, and the **playbook is
-published** at
+`conduit/adroit.rev` resolves from the adroit remote, and the playbook was
+published at
 [como-technologies/playbook](https://github.com/como-technologies/playbook)
-(2026-07-05, a fresh-history cut of the template — its content gate ships a
-generic example term list; a real engagement list stays in a gitignored
-local file). A cold checkout that clones the suite side by side now runs
+(2026-07-05, a fresh-history cut of the template) and later **archived**
+(2026-07-28, the template product retired by ADR-0010 — read-only, still
+clonable, so the demo keeps resolving it as the fictional client's legacy
+corpus). A cold checkout that clones the suite side by side still runs
 the demo with no overrides. The only remaining local-only input is the
 `../docs` run-evidence ledger, by policy.

@@ -22,10 +22,10 @@ Asserts the book's load-bearing claims against the sibling repos' reality:
   4. Badge sanity: any app badged spike or higher has a non-empty
      adroit-managed ADR corpus in its repo's WORKING TREE — merged main,
      not a side branch (the dogfooding floor) — the introduction's
-     TAPS table agrees with each chapter's badge line, and the playbook's
-     self-serve rung is pinned to its gating evidence (the template-check
-     recipe, scripts/init --fresh, its accepted ADR-0014, the Proposed
-     starter backlog, exactly two template-infrastructure records).
+     TAPS table agrees with each chapter's badge line, and the starter
+     content's counted claims (five accepted decisions, three with stored
+     plans, the 11-record backlog, ten glossary pages, the guide + the
+     rehearsed-bootstrap README) pin against the llm-wiki kit.
   5. Evidence-ledger discipline: the per-iteration changelog is a
      first-class SUMMARY page; every per-run evidence page under
      src/loop/dogfood/ is listed in SUMMARY, states a captured-run
@@ -89,7 +89,11 @@ PINS = {
     "tuesday": "2f478807fefc16a107bf43acd9dd7ce5d6b23417",
     "assessments": "9b05ae4859f28281309961cb059ba0d288b0c48c",
     "pulse": "f3022b4e25c0f0242202e472ae29df4d778d4f87",
-    "playbook": "dc7c604791b579baa7e5d19ff69c60207bfa4074",
+    # The KB product; carries the authoring kit + starter content the book
+    # claims (ADR-0010 / portfolio#7 wave 3). The retired playbook template's
+    # pin is gone with its check — the archived repo is a demo input now, not
+    # a book claim.
+    "llm-wiki": "58c9be989bb98e2b7c01482fbb44d81a0be7c32e",
 }
 
 
@@ -492,8 +496,8 @@ def check_adroit_cli() -> None:
         ("lint", "src/loop/prescribe.md", "adroit lint 1 -o json"),
         ("set-status", "src/loop/prescribe.md", "adroit set-status 1 accepted"),
         ("mcp", "src/loop/prescribe.md", "MCP projection"),
-        ("check", "src/products/playbook.md", "`adroit check`"),
-        ("index", "src/products/playbook.md", "`adroit index --check`"),
+        ("check", "src/services/kb-authoring.md", "`adroit check`"),
+        ("seed", "src/loop/prescribe.md", "adroit seed --from"),
     ]
     for name, relpath, needle in quoted:
         hit = assert_book_states(relpath, needle, f"the `adroit {name}` invocation")
@@ -889,116 +893,95 @@ def check_pulse() -> None:
 # ---------------------------------------------------------------------------
 
 
-def check_playbook_selfserve() -> None:
-    """The playbook's self-serve rung, pinned to the evidence that gated it
-    (playbook ADR-0014): the claim must stand on both pages that state it,
-    and the playbook repo must still have the template-check recipe, an
-    executable scripts/init with --fresh, the accepted scoping record, a
-    Proposed starter backlog, and exactly two template-infrastructure
-    records (the records --fresh keeps Accepted)."""
-    PAGES = ["src/products/playbook.md", "src/loop/prescribe.md"]
+def check_starter_content() -> None:
+    """The starter content's claims (ADR-0010 / portfolio#7 wave 3): the
+    template product retired, so the book now stakes numbers on the kit's
+    starter content in the llm-wiki repo — five accepted decisions, an
+    11-record Proposed backlog, ten glossary pages, the review-process
+    guide, and the rehearsed-bootstrap README. Both sides pinned: the page
+    must state the numbers, and the kit must ship them."""
+    PAGE = "src/products/starter-content.md"
     hits = [
-        assert_book_states(page, "`just template-check`", "the self-serve rung claim")
-        for page in PAGES
+        assert_book_states(
+            PAGE, "Five accepted engineering decisions", "the accepted-count claim"
+        ),
+        assert_book_states(
+            PAGE, "11-record Proposed starter backlog", "the backlog-count claim"
+        ),
+        assert_book_states(
+            PAGE, "Ten glossary entries", "the glossary-count claim"
+        ),
     ]
     if not any(hits):
         return
-    repo = resolve_repo("playbook")
+    repo = resolve_repo("llm-wiki")
     if repo is None:
-        # The playbook is published; a badge whose evidence cannot be
-        # fetched is red, not skipped (the self-serve rung is a claim
-        # about what an outside reader can verify).
+        # The kit is published with the KB product; a content claim whose
+        # evidence cannot be fetched is red, not skipped.
         fail(
-            "the self-serve rung's evidence repo resolves",
-            f"{PAGES[0]} and {PAGES[1]}",
-            unresolved("playbook"),
+            "the starter content's evidence repo resolves",
+            PAGE,
+            unresolved("llm-wiki"),
         )
         return
 
-    justfile = repo / "justfile"
-    if justfile.is_file() and re.search(
-        r"^template-check:", justfile.read_text(), re.M
-    ):
-        ok("playbook justfile has the template-check recipe (the self-serve proof)")
-    else:
-        fail(
-            "the book stakes the self-serve rung on `just template-check`",
-            f"{PAGES[0]} and {PAGES[1]}",
-            f"no template-check recipe in {justfile}",
-        )
-
-    init = repo / "scripts" / "init"
-    if init.is_file() and os.access(init, os.X_OK) and "--fresh" in init.read_text():
-        ok("playbook scripts/init is executable and supports --fresh")
-    else:
-        fail(
-            "the self-serve claim's documented first-clone steps run scripts/init",
-            f"{PAGES[0]} and {PAGES[1]}",
-            f"{init} is missing, not executable, or has no --fresh",
-        )
-
-    hit = assert_book_states(PAGES[0], "ADR-0014", "the self-serve scoping decision")
-    if hit:
-        adr14 = sorted(
-            adr_accepted(repo, "playbook").glob(
-                "0014-scope-the-self-serve-rung*.md"
-            )
-        )
-        if adr14:
-            ok("playbook ADR-0014 (scope the self-serve rung) is accepted")
-        else:
-            fail(
-                "the book scopes the self-serve rung by playbook ADR-0014",
-                f"{PAGES[0]}:{hit[0]}",
-                "no accepted 0014-scope-the-self-serve-rung*.md in"
-                f" {adr_accepted(repo, 'playbook')}",
-            )
-
-    hit = assert_book_states(
-        PAGES[0], "Proposed starter backlog", "the starter-backlog claim"
-    )
-    if hit:
-        proposed = [
-            p
-            for p in (repo / ADR_REL["playbook"] / "proposed").glob("*.md")
-            if ADR_FILE.search(p.name)
-        ]
-        if len(proposed) >= 3:
-            ok(
-                f"playbook ships a Proposed starter backlog ({len(proposed)}"
-                " records, >= 3)"
-            )
-        else:
-            fail(
-                "the book claims the clone ships a Proposed starter backlog",
-                f"{PAGES[0]}:{hit[0]}",
-                f"only {len(proposed)} Proposed records under"
-                f" {repo / ADR_REL['playbook'] / 'proposed'}",
-            )
-
-    # ADR-0014's role table: exactly two template-infrastructure records
-    # (ADR-0013 + ADR-0014 itself) stay Accepted through --fresh. A third
-    # marker (or a lost one) silently changes --fresh behavior — exactly
-    # the drift ADR-0014 calls out — so the count is pinned, not floored.
-    marked = [
-        p
-        for p in (repo / ADR_REL["playbook"]).rglob("*.md")
+    starter = repo / "kit" / "starter"
+    accepted = [
+        p for p in (starter / "decisions" / "accepted").glob("*.md")
         if ADR_FILE.search(p.name)
-        and "playbook:template-infrastructure" in p.read_text()
     ]
-    if len(marked) == 2:
-        ok(
-            "playbook corpus carries exactly two template-infrastructure"
-            " records (the --fresh keep-set)"
-        )
+    proposed = [
+        p for p in (starter / "decisions" / "proposed").glob("*.md")
+        if ADR_FILE.search(p.name)
+    ]
+    glossary = list((starter / "wiki" / "glossary").glob("*.md"))
+    if len(accepted) == 5:
+        ok("starter content ships exactly five accepted decisions")
     else:
         fail(
-            "the self-serve claim rests on ADR-0014's two-record"
-            " template-infrastructure keep-set",
-            f"{PAGES[0]} and {PAGES[1]}",
-            f"{len(marked)} marked records under {repo / ADR_REL['playbook']}:"
-            f" {[p.name for p in marked]}",
+            "the book counts five accepted starter decisions",
+            PAGE,
+            f"{len(accepted)} under {starter / 'decisions' / 'accepted'}",
         )
+    if len(proposed) == 11:
+        ok("starter content ships the 11-record Proposed backlog")
+    else:
+        fail(
+            "the book counts an 11-record Proposed starter backlog",
+            PAGE,
+            f"{len(proposed)} under {starter / 'decisions' / 'proposed'}",
+        )
+    if len(glossary) == 10:
+        ok("starter content ships ten glossary pages")
+    else:
+        fail(
+            "the book counts ten starter glossary entries",
+            PAGE,
+            f"{len(glossary)} under {starter / 'wiki' / 'glossary'}",
+        )
+    guide = starter / "wiki" / "guides" / "adr-review-process.md"
+    readme = starter / "README.md"
+    if guide.is_file() and readme.is_file():
+        ok("starter content ships the review-process guide and the bootstrap README")
+    else:
+        fail(
+            "the book stakes the starter on the guide + rehearsed-bootstrap README",
+            PAGE,
+            f"guide: {guide.is_file()}; README: {readme.is_file()}",
+        )
+    # Three of the five accepted decisions carry stored plans — the
+    # Adopt-ready claim.
+    hit = assert_book_states(PAGE, "stored implementation plans", "the Adopt-ready claim")
+    if hit:
+        with_plans = [p for p in accepted if "adroit:plan" in p.read_text()]
+        if len(with_plans) == 3:
+            ok("three starter decisions carry stored plans (the Adopt-ready claim)")
+        else:
+            fail(
+                "the book says three starter decisions carry stored plans",
+                f"{PAGE}:{hit[0]}",
+                f"{len(with_plans)}: {[p.name for p in with_plans]}",
+            )
 
 LADDER = ["spec", "spike", "dogfooding", "SME-usable", "self-serve"]
 
@@ -1015,7 +998,6 @@ ADR_REL = {
     "conduit": "docs/src/adr",
     "tuesday": "docs/src/adr",
     "pulse": "docs/src/adr",
-    "playbook": "docs/src/adr",
 }
 
 
@@ -1031,7 +1013,8 @@ BADGED_APPS = {
     "conduit": ("conduit", ADR_REL["conduit"]),
     "tuesday": ("tuesday", ADR_REL["tuesday"]),
     "pulse": ("pulse", ADR_REL["pulse"]),
-    "The playbook": ("playbook", ADR_REL["playbook"]),
+    # "The playbook" retired with its product (ADR-0010, wave 3): the badge
+    # retired rather than transferring; starter content carries no rung.
 }
 
 BADGE_PAGES = [
@@ -1039,7 +1022,7 @@ BADGE_PAGES = [
     "src/loop/prescribe.md",
     "src/loop/adopt.md",
     "src/loop/measure.md",
-    "src/products/playbook.md",
+    "src/products/starter-content.md",
 ]
 
 ADR_FILE = re.compile(r"\d{4}-.+\.md$")
@@ -1353,7 +1336,7 @@ def main() -> int:
     check_assessments_sme_evidence()
     check_operating_page()
     check_pulse()
-    check_playbook_selfserve()
+    check_starter_content()
     check_badges()
     check_ledger()
     print(

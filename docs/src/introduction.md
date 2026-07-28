@@ -15,7 +15,7 @@ AI runs through the whole loop as working assistance, not decoration: an assista
 A Como engagement runs a closed four-stage loop, and the portfolio has purpose-built tooling at each stage. See the [Roadmap](./roadmap.md) for the full walkthrough.
 
 1. **Assess** — Discover current state with [assessments](./loop/assess.md), our AI-assisted authoring tool that turns structured interviews into exportable, schema-validated maturity assessments.
-2. **Prescribe** — Record *decisions* and *guidance* in the knowledge base: decisions authored with [adroit](./loop/prescribe.md), seeded mechanically from the assessment export; guidance authored conversationally through your harness once the authoring kit lands (ADR-0010; in flight). [The playbook](./products/playbook.md) *(self-serve)* still ships today and is retiring to starter content for fresh KB spaces.
+2. **Prescribe** — Record *decisions* and *guidance* in the knowledge base: decisions authored with [adroit](./loop/prescribe.md) — from your harness or the CLI — and seeded mechanically from the assessment export; content classes authored conversationally per the kit's authoring contract. A fresh space starts from the shipped [starter content](./products/starter-content.md), not a blank page.
 3. **Adopt** — Turn decisions into shipped code. [conduit](./loop/adopt.md) *(dogfooding)* is the Adopt-stage engine — a forge-neutral agentic harness that reads adroit's ADRs and stored plans and drives an agent to work them as issues and pull requests inside your *own* forge, model, and cloud, exercised end to end on Como's own work every iteration; Como's [services](./services/README.md) will wrap it. This is where the decisions meet your teams, your code, and your platforms.
 4. **Measure** — Close the loop with honest signal. [pulse](./loop/measure.md) *(dogfooding, parked at the protocol proof)* captures verified-anonymous sentiment so you hear what people won't say in a town hall; [tuesday](./loop/measure.md) *(SME-usable)* quantifies where engineering capacity is actually going and attributes it back to the deciding ADR.
 
@@ -41,8 +41,8 @@ and where its evidence lives.
 |---|---|---|---|
 | [assessments](./loop/assess.md) | App | Assess | SME-usable |
 | [adroit](./loop/prescribe.md) | Tool | Prescribe | SME-usable |
-| [The playbook](./products/playbook.md) | Product | Prescribe | self-serve |
 | [The knowledge base](./kb-spec.md) | Product | every stage | substrate |
+| [Starter content](./products/starter-content.md) | Product | Prescribe | ships with the kit |
 | [conduit](./loop/adopt.md) | Tool | Adopt | dogfooding |
 | [pulse](./loop/measure.md) | App | Measure | dogfooding (parked) |
 | [tuesday](./loop/measure.md) | App | Measure | SME-usable |
@@ -65,11 +65,16 @@ recorded decision while the dogfood proof is kept green. The knowledge
 base carries no ladder rung by design: it is the substrate the badged
 apps run against, and its stage — ephemeral-first, built from source at
 HEAD — is recorded in this corpus's ADR-0006/0008/0009 rather than graded
-on the app ladder. The climbs above
-dogfooding are gated by evidence in each app's own repo: tuesday and the
-playbook template moved at the iteration-3 close (SME-usable and self-serve
-respectively); adroit and assessments moved to SME-usable at the
-iteration-4 open. conduit stays dogfooding by an honest call — it has the
-N=3 forge-neutral engine and the rehearsed customer-demo kit, but no
-owner-published remote and no external driver yet, so the rung waits on
-owner action. Nothing claims a rung its repo can't evidence.
+on the app ladder; the starter content is content, not an app, and is
+graded by its rehearsed bootstrap staying gate-clean instead. The climbs
+above dogfooding are gated by evidence in each app's own repo: tuesday
+moved at the iteration-3 close; adroit and assessments moved to
+SME-usable at the iteration-4 open. conduit stays dogfooding by an honest
+call — it has the N=3 forge-neutral engine and the rehearsed
+customer-demo kit, but no owner-published remote and no external driver
+yet, so the rung waits on owner action. The ladder also records a
+retirement: the playbook template earned **self-serve** at the
+iteration-3 close and carried it until ADR-0010 retired the product —
+the badge retired with it rather than transferring to a successor, and
+the harness-first offering will earn its own rung on its own evidence.
+Nothing claims a rung its repo can't evidence.

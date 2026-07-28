@@ -69,34 +69,25 @@ sha256 on consecutive reads).
 **Where its evidence lives.** In the adroit repo:
 `docs/src/dev/adopt-read-slice.md` — the recorded Adopt read-slice rehearsal
 on a live local model, re-runnable as `just adopt-slice`. And across the
-portfolio: adroit manages the ADR corpora of conduit, pulse, tuesday, the
-playbook, assessments — and this book's own `adr/`, where the decisions
+portfolio: adroit manages the ADR corpora of conduit, pulse, tuesday,
+assessments, the kit's starter content — and this book's own `adr/`, where the decisions
 behind this restructure are recorded. Every one of those repos' CI gates
 seeds its committed corpus into an ephemeral KB space and validates it
 there on every run (this book's ADR-0009) — the KB machinery is exercised
 continuously, not demonstrated once.
 
-## The playbook
+## Starter content
 
-**Maturity: self-serve** — a fresh copy initializes and passes its full
-gate without Como in the room: `just template-check` rehearses the
-documented first-clone steps in a temp copy and requires `just ci` green.
-Scoped by playbook ADR-0014: self-serve covers the content product, adroit
-is recommended-not-required; the corpus ships an 11-record
-Proposed starter backlog beyond the five accepted worked examples.
+A fresh knowledge base starts from the shipped
+[starter content](../products/starter-content.md) — five accepted
+engineering decisions (three carrying stored implementation plans), an
+11-record Proposed backlog, ten glossary entries, and the ADR
+review-process guide, all living in the llm-wiki kit (`kit/starter/`)
+and bootstrapped into a space by one rehearsed, gate-clean sequence.
+Starter decisions are examples a team keeps, supersedes, or replaces —
+superseding a starter opinion *is* the process working.
 
-**What it is.** The playbook is the Prescribe stage's published content
-product: an adroit-managed ADR corpus plus guides, published as a
-self-hosted static site (mdBook). The corpus is canonical content in its
-repo of record; wherever a tool needs to operate on it, it is seeded into
-a KB space first (this book's ADR-0009 — spaces are derived, disposable,
-never the source of truth). The portfolio dogfoods the pattern on its own
-generic playbook repo — five accepted engineering ADRs (trunk-based
-development, ADR governance, dependency pinning and audit, a shared
-glossary, automated testing), three of them carrying stored implementation
-plans.
-
-**How it enters the loop.** A playbook's accepted ADRs are not just
+**How it enters the loop.** A knowledge base's accepted ADRs are not just
 documentation — they are the Adopt stage's work queue. The corpus is
 consumed entirely over adroit's CLI, no scraping and no human in the read
 path — stood up in a space, then read:
@@ -104,17 +95,19 @@ path — stood up in a space, then read:
 ```sh
 SPACE=$(mktemp -d)
 printf 'name = "adrs"\n' > "$SPACE/wiki.toml" && mkdir -p "$SPACE/wiki/decisions"
-adroit seed --from docs/src/adr --dir "$SPACE"              # corpus -> KB space
+adroit seed --from kit/starter/decisions --dir "$SPACE"     # corpus -> KB space
 ADROIT_DIR=$SPACE adroit list --status accepted -o json     # enumerate the queue
 ADROIT_DIR=$SPACE adroit show 4 -o json                     # read one decision
 ADROIT_DIR=$SPACE adroit plan 4 -o json                     # read its stored plan
 ```
 
-**Where its evidence lives.** In the playbook repo:
-`docs/src/guides/adopt-read-path.md` documents the Adopt read path with JSON
-captured against that very corpus, and the stored plans live inside the
-accepted ADR documents under `docs/src/adr/accepted/`. The repo's CI gate runs
-the corpus check and a banned-terms scan on every build. The published
-template still pins adroit at v0.2.0 (pre-KB-cutover) by its own recorded
-resolution chain; moving it to the seed-into-a-space gate is a coming
-wave, stated here so the pin isn't mistaken for drift.
+The same sequence works for any legacy corpus a client brings — `seed`
+exists precisely so an existing ADR history bootstraps into a space
+without re-keying.
+
+**Where its evidence lives.** In the llm-wiki repo: `kit/starter/README.md`
+records the rehearsed bootstrap (seed 16, strict ingest, `adroit check`
+clean, lint at zero errors) and is re-rehearsed whenever the content
+changes. The template repository that formerly shipped this corpus is
+archived — the retirement story is on the
+[starter content](../products/starter-content.md) page.

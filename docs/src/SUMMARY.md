@@ -28,7 +28,7 @@
 # Products
 
 - [Overview](./products/README.md)
-  - [The playbook](./products/playbook.md)
+  - [Starter content](./products/starter-content.md)
 
 ---
 

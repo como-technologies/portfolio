@@ -20,7 +20,7 @@ flowchart LR
 
 **What happens.** The assessment drives an opinionated knowledge base: *decisions* (as ADRs — Architecture Decision Records) and *guidance* (as step-by-step guides), held as typed, schema-validated pages. Teams use [adroit](./loop/prescribe.md) to author and link the decisions — `adroit import --from-assessment` mechanically seeds Proposed ADRs straight from the assessment export, so the hand-off is a seam, not a re-keying exercise, and AI assists draft, revise, plan, and answer questions at every step while strict admission validation gates every write. adroit operates exclusively against KB spaces (its ADR-0020).
 
-**What you get.** A living knowledge base tailored to your context — opinionated where you need a jumpstart, flexible where you have your own shape — published to your teams as a static site ([the playbook](./products/playbook.md) is the ready-to-adopt pattern) and machine-readable to every downstream stage.
+**What you get.** A living knowledge base tailored to your context — opinionated where you need a jumpstart (a fresh space begins from the shipped [starter content](./products/starter-content.md)), flexible where you have your own shape — and machine-readable to every downstream stage.
 
 ## 3. Adopt
 
