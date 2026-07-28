@@ -93,7 +93,7 @@ PINS = {
     # claims (ADR-0010 / portfolio#7 wave 3). The retired playbook template's
     # pin is gone with its check — the archived repo is a demo input now, not
     # a book claim.
-    "llm-wiki": "58c9be989bb98e2b7c01482fbb44d81a0be7c32e",
+    "llm-wiki": "b1aa454d7bdb6cff2f9f1ae9668b418a85669f65",
 }
 
 
@@ -656,6 +656,9 @@ def check_tuesday_cli() -> None:
         ("adr_totals", "`adr_totals`"),
         ("MonthlyReport", "MonthlyReport JSON"),
         ("gitea", "--source gitea"),
+        # Wave 4: the measure-report page emission the book stakes the
+        # Measure-into-the-KB story on.
+        ("--kb", "`--kb`"),
     ]:
         hit = assert_book_states(MEASURE, book_needle, f"tuesday-report's {needle}")
         if hit is None:

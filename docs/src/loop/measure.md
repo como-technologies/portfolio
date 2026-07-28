@@ -4,10 +4,18 @@ Adoption is observed, not assumed — on two axes. tuesday quantifies where
 engineering capacity actually goes and attributes it to the decisions that
 spent it; pulse captures the qualitative signal people won't volunteer in a
 town hall. Both produce machine-readable artifacts, because the loop's last
-hand-off is the next assessment's input. Both are also named heads of the
-knowledge base — their report page types are specified in the
-[KB spec](../kb-spec.md); registering them there is a coming retrofit wave
-(future state — adroit's retrofit landed first).
+hand-off is the next assessment's input. Both are named heads of the
+knowledge base, with the shared `measure-report` page class shipped in the
+[KB spec](../kb-spec.md)'s schema library: tuesday emits typed report pages
+today (`--kb`), so a harness answers "what did this decision cost?" from KB
+pages alone; pulse's emitter arrives if it un-parks (its ADR-0010 sets that
+bar — no development while parked). pulse's KB boundary is already decided
+by its own math: the KB's git history is append-only, so nothing admitted
+can be redacted later — which means only the **k-anonymous aggregate**
+(the `pulse.measure-report/v1` artifact, the only thing that ever leaves
+pulse's signal zone) may become a page, with suppression applied *before*
+admission; raw responses, respondent-level rows, and any cut below the
+k-threshold never enter the knowledge base, ever.
 
 ## tuesday
 
@@ -49,7 +57,10 @@ tuesday-report --source gitea --owner como --repo conduit-dogfood \
 It produces the canonical MonthlyReport JSON, including the `adr_totals`
 rollup: a PR's **full** allocated hours are credited to the ADR named by its
 `adr:*` label — attribution answers "what did this decision cost?", so it is
-never split the way categories are. `--strict` enforces the allocation
+never split the way categories are. Adding `--kb <space-dir>` also writes
+the month as a `measure-report` typed page into a KB space — deterministic,
+schema-gated at ingest, skipped when `--strict` finds violations — which is
+how Measure evidence lands beside the decisions it prices. `--strict` enforces the allocation
 ruling with a nonzero exit: every merged PR must carry exactly one
 `effort:N-*` label **and** (a category label **or** an `adr:*` label).
 Structural labels (`adr:*`, `conduit:*`) are machinery, never categories.

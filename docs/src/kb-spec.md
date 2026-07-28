@@ -113,8 +113,10 @@ Each contract cites its evidence in the spike's
 
 ### 2. Page types & schemas
 
-- The five target classes — `decision`, `guide`, `glossary-entry`,
-  `worked-example`, `plan` — **ship in-engine as the Como schema library**
+- The six target classes — `decision`, `guide`, `glossary-entry`,
+  `worked-example`, `plan`, and `measure-report` (the Measure heads'
+  class, joined at portfolio#7 wave 4) — **ship in-engine as the Como
+  schema library**
   (llm-wiki#14): `spaces create` installs them alongside the bundled types.
   Further custom types remain a `schema add` away, one JSON Schema per type.
 - The `decision` type is derived from adroit's `Adr`/`Status` model
@@ -227,8 +229,9 @@ Each contract cites its evidence in the spike's
 - **The heads**: adroit, tuesday, pulse, and the librarian. Structured
   writers in; seam readers out — always against instances, via the seams.
   Current state, plainly: adroit is retrofitted and KB-only today (its
-  ADR-0020); tuesday and pulse register their page types in coming waves;
-  the librarian is future state.
+  ADR-0020); tuesday emits `measure-report` pages today
+  (`tuesday-report --kb`); pulse's emitter arrives when it un-parks (its
+  ADR-0010 sets that bar); the librarian is future state.
 
 Open product work:
 [llm-wiki issues](https://github.com/como-technologies/llm-wiki/issues).
