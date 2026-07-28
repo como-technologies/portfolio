@@ -77,14 +77,14 @@ CACHE = REPO / ".como" / "deps"
 # Pinned at each sibling's published main carrying the docs/src/adr corpus, so a
 # fresh CI checkout (no siblings) clones the right reality.
 PINS = {
-    "conduit": "6dae385fd2b0cf1254139c9af35cd542d2aaad2c",
-    "adroit": "683049bb7f3d48c55cfe96daceab38a448b4ec9f",
-    "tuesday": "2f478807fefc16a107bf43acd9dd7ce5d6b23417",
-    "assessments": "9b05ae4859f28281309961cb059ba0d288b0c48c",
-    "pulse": "f3022b4e25c0f0242202e472ae29df4d778d4f87",
+    "conduit": "d5f210573e444ebf490a5e89ec15fe99f51e7ed8",
+    "adroit": "7ff4042810f8ea894c578ffc7f14226ef2ff08b0",
+    "tuesday": "42076ec28e6fb83391979e32d2d8e8b5caef5e77",
+    "assessments": "bf28870ef86062edc96d26fde69677a0d0262dad",
+    "pulse": "15e7d5fdc852ddbf7b4b5d0590dbac5c2e0608e7",
     # The KB product; carries the authoring kit + starter content the book
     # claims (ADR-0010 / portfolio#7).
-    "llm-wiki": "b1aa454d7bdb6cff2f9f1ae9668b418a85669f65",
+    "llm-wiki": "e9ea777c5fa2a960a7ce0247cb26c3be88a11b9a",
 }
 
 
