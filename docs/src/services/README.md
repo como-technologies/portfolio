@@ -7,9 +7,11 @@ but each service is available on its own for clients who already have their
 own shape.
 
 The tools carry AI assistance at every stage of the loop, behind mechanical
-gates; the services carry the people. Today the guided loop is driven by
-Como with the client's SMEs alongside — the maturity ladder's SME-usable →
-self-serve climb is the honest record of it moving into client hands.
+gates; the services carry the people. The loop is harness-first (this
+book's ADR-0010): engagements run in the client's own AI harness,
+configured from the shipped authoring kit, with Como driving today and
+SMEs alongside — the maturity ladder's SME-usable → self-serve climb is
+the honest record of it moving fully into client hands.
 
 ## The engagement arc
 

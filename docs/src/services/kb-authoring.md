@@ -4,15 +4,17 @@ Co-creation of an opinionated knowledge base tailored to your context:
 *decisions* recorded as ADRs, *guidance* as step-by-step guides — typed,
 schema-validated pages with AI assistance at every authoring step and a
 mechanical gate behind each one. This is the human wrapper around the
-loop's [Prescribe](../loop/prescribe.md) stage. The target interaction is
-harness-first (this book's ADR-0010): your people work in the AI harness
-of their choice, configured with Como's tools over MCP, and the content
-lands in the KB in the right shape. Today — said plainly — Como drives
-that loop with your SMEs alongside; the authoring kit that hands it to
-your harness is in flight
-([portfolio#7](https://github.com/como-technologies/portfolio/issues/7)),
-and the shipped [starter content](../products/starter-content.md) means
-day one starts from a working corpus.
+loop's [Prescribe](../loop/prescribe.md) stage, and it is harness-first
+(this book's ADR-0010): Como configures your harness of choice from the
+shipped authoring kit — MCP servers, Como skills, the authoring contract,
+a space provisioned with strict gates and
+[starter content](../products/starter-content.md) — and then your SMEs
+drive the session in their own harness with Como facilitating. What the
+engagement hands over is not a document set but a working loop: the
+space, the configured harness, and people who have run it. Today — said
+plainly — Como leads these sessions; a client team running the loop with
+no Como in the room is a maturity rung the offering will earn on its own
+evidence.
 
 **Inputs.** The assessment export from an
 [Assessment engagement](./assessment.md) (or your own equivalent — the seam

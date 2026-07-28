@@ -1,7 +1,7 @@
 # Operating the suite
 
 How to stand the whole TAPS suite up from a cold checkout and verify it, in
-three widening rings — then the end-to-end engagement demo. Everything here
+four widening rings — then the end-to-end engagement demo. Everything here
 runs locally; nothing is pushed.
 
 ## Prerequisites
@@ -66,12 +66,13 @@ Every repo's gate validates its ADR corpus: the five Rust apps each carry an
 `adr-check` leg in `just ci` — since adroit went KB-only (adroit ADR-0020,
 portfolio ADR-0009) that leg seeds the committed corpus into an ephemeral KB
 space and validates it there, so the gate also exercises the KB machinery on
-every run — and the playbook — a corpus, not a Rust app — gates its content
-scan, corpus/index validation (`check`), and book build instead of code
-legs. Green in all of them means each app is internally
+every run. llm-wiki (the KB product) gates with its cargo suite, which
+covers provisioning, the Como schema library, and the kit's counted starter
+content. Green in all of them means each app is internally
 sound — the Rust apps formatted, lint-clean, and tested; every mdbook builds;
 every corpus validates. This is the per-app truth check and the fastest
-signal.
+signal. (The archived playbook repo is no longer part of this ring — it is
+read-only history and a demo input, not a gated app.)
 
 The Rust repos also gate dependency advisories with `cargo audit` — a
 `crate-audit` leg in `just ci` (conduit runs it as a dedicated CI job
@@ -131,10 +132,44 @@ recomputes the two ollama lanes for real (timings in the [customer demo](https:/
 kit's narrated page). Deeper conformance is env-gated: `CONDUIT_E2E_GITEA=1`
 (live forge), `CONDUIT_E2E_ADROIT=1`, `CONDUIT_E2E_GITHUB=1`.
 
+## Ring 4 — the knowledge base, harness-first
+
+The harness-first loop (ADR-0010) from the same cold checkout, in two
+legs. The **mechanical leg** is scripted and verifiable with no AI
+anywhere — it stands a fully provisioned space up from the kit's starter
+content and ends gate-clean:
+
+```sh
+cd llm-wiki && cargo build --release          # the KB product, from source at HEAD
+llm-wiki spaces create "$DIR" --name team --set-default
+adroit seed --from kit/starter/decisions --dir "$DIR"   # 16 decisions, fresh identities
+cp -r kit/starter/wiki/. "$DIR/wiki/"                   # glossary + guides, typed pages
+llm-wiki ingest . --wiki team                           # strict admission gate
+adroit check --dir "$DIR"                               # semantic gate: clean
+llm-wiki lint --wiki team                               # zero errors is the rehearsed bar
+```
+
+The **conversational leg** needs a harness: copy the kit's
+`claude-code/.mcp.json`, `CLAUDE.md`, and `skills/` into the space and
+open Claude Code there (or configure Claude Desktop with both MCP
+servers, adroit started `--allow-write` — its ADR-0021). Then author:
+content classes through the engine seams, decisions through adroit,
+every write behind the same gates the mechanical leg just proved. The
+captured evidence for both shapes lives with the kit —
+`kit/worked-example/session.md` (a real Claude Code session, gates
+catching real mistakes) and the recorded MCP-only rehearsal (the full
+decision lifecycle over raw JSON-RPC). tuesday closes the ring's loop:
+`tuesday-report --kb "$DIR"` lands the month's capacity report beside
+the decisions it prices, and a search over the space answers "what did
+this decision cost?" from pages alone.
+
 ## The pre-review cold gate — `scripts/cold-sim`
 
-The three rings above are what a cold reviewer runs; `scripts/cold-sim` (in
-this repo) rehearses exactly that before a review, as one command. It clones
+Rings 1–3 are what a cold reviewer runs mechanically; `scripts/cold-sim`
+(in this repo) rehearses exactly those before a review, as one command
+(ring 4's mechanical leg is rehearsed where its content lives — the kit's
+starter README in llm-wiki — and isn't in cold-sim yet; the conversational
+leg needs a human with a harness by definition). It clones
 the suite side by side into a fresh sandbox and runs the runbook verbatim
 under a contributor-default environment a warm workspace never exercises: a
 hostile global git config (`commit.gpgsign = true` with a throwaway
