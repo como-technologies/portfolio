@@ -43,19 +43,23 @@ amaker author --brief examples/dogfood/brief.md
 # gate: re-check the export against the published JSON Schema
 amaker validate assessment.yaml
 
-# the consuming side of the seam (run in the Prescribe stage)
-ADROIT_DIR=$(mktemp -d) adroit import \
+# the consuming side of the seam (run in the Prescribe stage; adroit is
+# KB-only, so the target is a fresh space, not a bare directory)
+SPACE=$(mktemp -d)
+printf 'name = "adrs"\n' > "$SPACE/wiki.toml" && mkdir -p "$SPACE/wiki/decisions"
+ADROIT_DIR=$SPACE adroit import \
   --from-assessment assessment.yaml --dry-run -o json
 ```
 
-One command proves the seam end to end: `just dogfood` authors a fresh
-assessment from the committed generic engineering-maturity brief, validates
-it, dry-run-imports it into a fresh corpus, and asserts that every practice
-produced a seed. The recorded run: four domains, eight practices, sixty
-questions authored in one pass — eight practices in, eight Proposed-ADR
-seeds out. `just seam-check` pins the same assertion in CI against a
-committed golden export, so contract drift on either side of the seam fails
-`just ci` without needing a model.
+The seam is proven from both ends. Live: the three-step rehearsal in the
+assessments repo's dogfood page (author → validate → dry-run import into a
+fresh space) — the recorded run authored four domains, eight practices,
+and sixty questions in one pass; eight practices in, eight Proposed-ADR
+seeds out. Mechanically, in CI on both sides: assessments' golden-export
+contract test gates the producer's shape, and adroit vendors that same
+golden export as its ingest-contract fixture and pins the seeded backlog
+against it — contract drift on either side fails that repo's `just ci`
+without needing a model.
 
 **Where its evidence lives.** In the assessments repo:
 `docs/src/dogfood.md` (the captured Assess → Prescribe seam run),

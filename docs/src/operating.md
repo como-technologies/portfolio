@@ -98,12 +98,12 @@ everything down:
 cd conduit
 demo/kit/preflight               # verify docker (+ pull llama3.2 for --live)
 just init-adroit                 # build the pinned adroit into .conduit/bin
-demo/kit/demo-up                 # throwaway Gitea + seeded client corpus + binaries
+demo/kit/demo-up                 # throwaway Gitea + client corpus + its derived KB space
 demo/kit/beat-1-measure-prior    # pulse's prior-iteration signal
 demo/kit/beat-2-assess           # brief + signal -> assessment   (--live for ollama)
-demo/kit/beat-3-prescribe        # assessment -> accepted ADR + stored plan  (--live)
+demo/kit/beat-3-prescribe        # assessment -> ADRs in a KB space + stored plan (--live)
 demo/kit/beat-4-adopt            # stored plan -> human-gated PR -> merge -> verify 6/6
-demo/kit/beat-5-measure          # tuesday --strict + Adopt<->Measure cross-check
+demo/kit/beat-5-measure          # tuesday --strict + measure page into the space + query
 demo/kit/demo-down               # destroys the forge; leaves nothing
 ```
 
@@ -111,12 +111,19 @@ demo/kit/demo-down               # destroys the forge; leaves nothing
 remote at the pinned rev (reachable there today), else a sibling `../adroit`
 when the remote is unreachable (its HEAD, with a loud local-dev notice, if
 that checkout lacks the exact pin). `demo-up` builds the client corpus from
-llm-wiki's starter content, resolves the sibling binaries the same way, and
-seeds the throwaway forge; it stops early with named knobs if Docker isn't
+llm-wiki's starter content, seeds a **per-run KB space derived from it** —
+the corpus repo on the forge stays the legacy repo of record; adroit and
+conduit operate on the space (conduit ADR-0017, this book's ADR-0009 made
+visible) — resolves the sibling binaries the same way, and seeds the
+throwaway forge; it stops early with named knobs if Docker isn't
 up or llm-wiki doesn't resolve (run `preflight` first).
 
 Each beat prints its talking point and the machine evidence it just produced
-(verify 6/6, byte-identical forge transcripts, `CROSS-CHECK PASS`). The
+(verify 6/6, byte-identical forge transcripts, `CROSS-CHECK PASS`, the
+measure-report page landing in the run's space with its `adr_hours`
+attribution — and, when an llm-wiki binary resolves, a search over the
+space answering "what did this decision cost?" from pages alone; absent,
+that close skips with a notice, and `preflight` prints the fact). The
 pre-baked path runs every beat in seconds and needs only Docker; `--live`
 recomputes the two ollama lanes for real (timings in the [customer demo](https://github.com/como-technologies/conduit)
 kit's narrated page). Deeper conformance is env-gated: `CONDUIT_E2E_GITEA=1`
@@ -131,6 +138,9 @@ content and ends gate-clean:
 
 ```sh
 cd llm-wiki && cargo build --release          # the KB product, from source at HEAD
+export LLM_WIKI_CONFIG="$DIR.registry.toml"   # scope the registry to the run:
+                                              # disposable space, disposable registry —
+                                              # nothing lands in ~/.llm-wiki
 llm-wiki spaces create "$DIR" --name team --set-default
 adroit seed --from kit/starter/decisions --dir "$DIR"   # 16 decisions, fresh identities
 cp -r kit/starter/wiki/. "$DIR/wiki/"                   # glossary + guides, typed pages
