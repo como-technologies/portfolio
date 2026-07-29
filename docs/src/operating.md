@@ -118,6 +118,14 @@ visible) — resolves the sibling binaries the same way, and seeds the
 throwaway forge; it stops early with named knobs if Docker isn't
 up or llm-wiki doesn't resolve (run `preflight` first).
 
+**Verify as you go**: every artifact a run produces lives in one per-run
+workdir — `conduit/demo/kit/.current` points at the active one — with the
+KB at `$WORK/corpus-space` (read it any time:
+`.conduit/bin/adroit list --dir "$WORK/corpus-space"`; after beat 5,
+`cat "$WORK/corpus-space"/wiki/measures/*.md`). The customer-demo page's
+"Seeing it" section carries the beat-by-beat table of what you should
+see, and each beat prints an ` -> inspect:` hint.
+
 Each beat prints its talking point and the machine evidence it just produced
 (verify 6/6, byte-identical forge transcripts, `CROSS-CHECK PASS`, the
 measure-report page landing in the run's space with its `adr_hours`
