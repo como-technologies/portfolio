@@ -1,33 +1,19 @@
 # Summary
 
 [Introduction](./introduction.md)
-[Roadmap](./roadmap.md)
-[Operating the suite](./operating.md)
-[The Como KB specification](./kb-spec.md)
 
-# The Loop
+# The loop
 
 - [Assess](./loop/assess.md)
 - [Prescribe](./loop/prescribe.md)
 - [Adopt](./loop/adopt.md)
 - [Measure](./loop/measure.md)
 
-# Services
+# The foundation
 
-- [Overview](./services/README.md)
-  - [Assessment engagement](./services/assessment.md)
-  - [Knowledge base authoring](./services/kb-authoring.md)
-  - [Adoption enablement](./services/adoption-enablement.md)
-  - [Agentic delivery (pilot)](./services/agentic-delivery.md)
-  - [Measurement setup](./services/measurement-setup.md)
+- [The knowledge base](./knowledge-base.md)
+- [Starter content](./starter-content.md)
 
-# Products
+# Working with Como
 
-- [Overview](./products/README.md)
-  - [Starter content](./products/starter-content.md)
-
----
-
-[Iteration changelog](./changelog.md)
-[How this book stays true](./truthfulness.md)
-[KB substrate spike — evidence](./spikes/kb-substrate.md)
+- [Services](./services.md)

@@ -7,14 +7,7 @@ init:
     cargo install mdbook mdbook-mermaid mdbook-gruvbox
 
 # Run all CI checks (used by .github/workflows/ci.yml)
-ci: verify-claims book adr-check
-
-# The truthfulness gate (ADR-0003): assert the book's load-bearing claims
-# against the sibling repos, each resolved by the suite convention
-# (ADR-0004): COMO_<REPO>_DIR -> sibling ../<name> -> .como/deps clone
-# cache at the script's declared pin -> skip-with-notice naming the knobs.
-verify-claims:
-    python3 scripts/verify-claims
+ci: book adr-check
 
 # Build the book
 book:

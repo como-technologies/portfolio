@@ -48,7 +48,8 @@ each closed with a live-verified, tracked finding.
 
 Chosen: **the Como fork** ([`como-technologies/llm-wiki`](https://github.com/como-technologies/llm-wiki),
 branch `como-main`), together with **adoption of the
-[Como KB specification](../../kb-spec.md)** produced by the spike. The spike's
+[Como KB specification](https://github.com/como-technologies/llm-wiki/blob/main/docs/specifications/como-kb-spec.md)**
+(now homed with the KB product) produced by the spike. The spike's
 verdict is GO, on evidence:
 
 - **Stock was disqualified on the one-way-door**: identity is the file path;
@@ -85,7 +86,7 @@ the spec and upstreamable if engagement ever resumes.
 
 ### Supersedes ADR-0005 (spec-only entry)
 
-An earlier bounded spike ([evidence](../../spikes/kb-substrate.md)) reached
+An earlier bounded spike (evidence page since removed; in git history) reached
 ADR-0005 (since removed; in git history):
 spec-only, no substrate dependency — the right call against stock 0.4.1
 before the spec existed, and its own text scheduled this revisit. Its

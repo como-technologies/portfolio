@@ -6,12 +6,12 @@ Reproduces what a cold reviewer actually does to this suite: clone every
 repo cold, side by side under one parent, in a contributor-default
 environment — global commit signing ON with a throwaway identity, none of
 the suite's COMO_* knobs set — and run the three-ring runbook from
-docs/src/operating.md VERBATIM:
+OPERATIONS.md VERBATIM:
 
   Ring 1   `just ci` in each of the five app repos
            (adroit, assessments, conduit, tuesday, pulse)
-  Ring 2   `just ci` in portfolio — verify-claims resolves the sandbox
-           siblings; its summary line is captured into the report
+  Ring 2   `just ci` in portfolio — the book build plus adr-check
+           against the sandbox's sibling adroit
   Ring 3   in the conduit clone: demo/kit/preflight, `just init-adroit`,
            demo/kit/demo-up, demo/kit/demo-down
 
@@ -209,7 +209,7 @@ def run_leg(cmd: list[str], cwd: Path, log: Path, env: dict[str, str], timeout: 
 
 
 # ---------------------------------------------------------------------------
-# The three rings — the operating.md runbook, verbatim
+# The three rings — the OPERATIONS.md runbook, verbatim
 # ---------------------------------------------------------------------------
 
 
@@ -226,12 +226,14 @@ def run_ring1(sandbox: Path, logs: Path, env: dict[str, str], only: str | None) 
 
 def run_ring2(sandbox: Path, logs: Path, env: dict[str, str]) -> str:
     log = logs / "ring2-portfolio.log"
-    print("ring 2: just ci in portfolio (verify-claims resolves the sandbox siblings) ...")
+    print("ring 2: just ci in portfolio (book build + adr-check against the sandbox siblings) ...")
     code = run_leg(["just", "ci"], sandbox / "portfolio", log, env, CI_TIMEOUT)
     text = log.read_text(errors="replace")
-    m = re.search(r"^verify-claims: \d+ passed, \d+ skipped, \d+ failed$", text, re.M)
-    summary = m.group(0) if m else "verify-claims summary line NOT FOUND"
-    result = "PASS" if code == 0 and m else "FAIL"
+    # adr-check is advisory when adroit is absent; in the sandbox the ring-1
+    # adroit clone sits beside portfolio, so a skip means resolution broke.
+    m = re.search(r"^skip: adroit not found", text, re.M)
+    summary = "adr-check skipped: sibling adroit NOT RESOLVED" if m else "book + adr-check"
+    result = "PASS" if code == 0 and not m else "FAIL"
     record("2", "portfolio", result, log)
     print(f"ring 2: {summary}")
     return f"{result} ({summary})"

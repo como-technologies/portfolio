@@ -1,13 +1,17 @@
 # Como Technologies Portfolio
 
-The source for the **TAPS Portfolio** book — Como Technologies' living
-documentation of its Tools, Apps, Products, and Services and the closed
-four-stage modernization loop (Assess → Prescribe → Adopt → Measure) they
-serve. It's an [mdBook](https://rust-lang.github.io/mdBook/) site; the prose
-lives in [`src/`](src/) and the navigation in [`src/SUMMARY.md`](src/SUMMARY.md).
+The source for the **TAPS Portfolio** book — Como Technologies' guide to
+its Tools, Apps, Products, and Services and the closed four-stage
+modernization loop (Assess → Prescribe → Adopt → Measure) they serve. It's
+an [mdBook](https://rust-lang.github.io/mdBook/) site; the prose lives in
+[`docs/src/`](docs/src/) and the navigation in
+[`docs/src/SUMMARY.md`](docs/src/SUMMARY.md).
 
-Start with the rendered [Introduction](src/introduction.md) for what the
-portfolio *is*. This README is about how to **build and work on the book**.
+The book is deliberately short: it tells the story of the tools and how
+they work together, and links to each tool's own repo for the details.
+Start with the rendered [Introduction](docs/src/introduction.md). This
+README is about how to **build and work on the book**. For standing the
+whole suite up locally, see [OPERATIONS.md](OPERATIONS.md).
 
 ## Prerequisites
 
@@ -15,7 +19,6 @@ portfolio *is*. This README is about how to **build and work on the book**.
 |---|---|---|
 | [Rust toolchain](https://rustup.rs) (`cargo`) | mdBook and its plugins are installed via `cargo install` | `curl https://sh.rustup.rs -sSf \| sh` |
 | [`just`](https://github.com/casey/just) | Command runner for every task below | `cargo install just` (or your package manager) |
-| `python3` | Only for the CI truthfulness gate (`verify-claims`) — not needed to read or build the book | preinstalled on most systems |
 
 ## Getting started
 
@@ -27,8 +30,9 @@ just init
 just book-serve
 ```
 
-That's it — edit anything under `src/` and the page reloads. To produce a
-static build instead, run `just book` (output lands in `target/book/`).
+That's it — edit anything under `docs/src/` and the page reloads. To
+produce a static build instead, run `just book` (output lands in
+`target/book/`).
 
 Run `just` (or `just --list`) any time to see every available recipe.
 
@@ -41,27 +45,24 @@ Run `just` (or `just --list`) any time to see every available recipe.
 | `just book` | Build the static site into `target/book/` |
 | `just book-test` | Validate code blocks in the book |
 | `just clean` | Remove all build artifacts |
-| `just ci` | Run the full CI suite (see below) |
+| `just ci` | Build the book and validate the ADR corpus |
 
-## CI and the truthfulness gates
+## CI
 
-`just ci` runs `verify-claims`, `book`, and `adr-check`. The book makes
-load-bearing claims about its sibling repos, and these gates assert those
-claims against the real code rather than trusting the prose
-(see [How this book stays true](src/truthfulness.md)).
-
-`verify-claims` and `adr-check` resolve sibling repos by convention —
-`COMO_<REPO>_DIR` env var → sibling checkout under `../<name>` → cached clone —
-and **skip with a notice** when a dependency isn't found, so they never block a
-plain `just book`. You only need the siblings checked out (e.g. `../adroit`) to
-exercise the full gate locally; the build itself needs none of them.
+`just ci` runs `book` and `adr-check`. The `adr-check` recipe validates
+this repo's own decision corpus (`docs/src/adr/`) by seeding it into an
+ephemeral KB space with adroit, resolved by the suite convention
+(`ADROIT_BIN` → sibling `../adroit` build → PATH → cached install) — and
+**skips with a notice** when adroit isn't available, so it never blocks a
+plain `just book`.
 
 ## Layout
 
 ```
-src/            book content (Markdown); SUMMARY.md is the table of contents
+docs/src/       book content (Markdown); SUMMARY.md is the table of contents
+docs/book.toml  mdBook configuration
+docs/gruvbox/   theme assets
 justfile        all tasks — run `just` to list them
-book.toml       mdBook configuration
-gruvbox/        theme assets
-scripts/        verify-claims, cold-sim (CI tooling)
+scripts/        cold-sim, the pre-review cold-checkout rehearsal (see OPERATIONS.md)
+OPERATIONS.md   the suite-wide stand-up and verification runbook
 ```

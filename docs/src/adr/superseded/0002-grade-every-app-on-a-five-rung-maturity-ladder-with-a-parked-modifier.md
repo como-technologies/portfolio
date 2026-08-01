@@ -1,10 +1,10 @@
 # ADR-0002: Grade every app on a five-rung maturity ladder with a parked modifier
 
-> State: Accepted
+> State: Superseded
 
 ## Status
 
-Accepted
+Superseded by [ADR-0011](../accepted/0011-rewrite-the-book-as-a-short-reader-first-product-guide.md) — the book's editorial reset retired maturity grading from the book entirely; the book describes the portfolio aspirationally, and current per-tool reality lives in each tool's own repo.
 
 ## Stakeholders
 

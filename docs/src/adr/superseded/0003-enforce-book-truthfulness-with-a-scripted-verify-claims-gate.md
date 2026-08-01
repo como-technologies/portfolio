@@ -1,10 +1,10 @@
 # ADR-0003: Enforce book truthfulness with a scripted verify-claims gate
 
-> State: Accepted
+> State: Superseded
 
 ## Status
 
-Accepted
+Superseded by [ADR-0011](../accepted/0011-rewrite-the-book-as-a-short-reader-first-product-guide.md) — the book's editorial reset removed the mechanically-verified claims the gate existed to police; seam enforcement lives in the owning repos' contract tests, and `just ci` is the book build plus `adr-check`.
 
 ## Stakeholders
 

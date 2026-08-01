@@ -1,8 +1,9 @@
 # Operating the suite
 
-How to stand the whole TAPS suite up from a cold checkout and verify it, in
-four widening rings — then the end-to-end engagement demo. Everything here
-runs locally; nothing is pushed.
+The internal runbook: how to stand the whole TAPS suite up from a cold
+checkout and verify it, in widening rings — then the end-to-end engagement
+demo. Everything here runs locally; nothing is pushed. (This is Como-facing
+operational detail; the reader-facing story is the book under `docs/`.)
 
 ## Prerequisites
 
@@ -13,10 +14,10 @@ a gitignored cache. The simplest layout is all repos checked out under one
 parent (`assessments`, `adroit`, `conduit`, `tuesday`, `pulse`,
 `llm-wiki`, `portfolio`) — then everything resolves with no configuration
 (`llm-wiki`, the KB substrate, resolves like any other sibling and builds
-from source at HEAD per this book's ADR-0009). Each app's ADR
+from source at HEAD per this repo's ADR-0009). Each app's ADR
 corpus ships **inside its own published mdbook source** at the suite's uniform
-`docs/src/adr/` path, so the truthfulness gate in Ring 2 finds it in
-any checkout — no separate corpus download.
+`docs/src/adr/` path, so every repo's corpus gate finds it in any checkout —
+no separate corpus download.
 
 **Toolchain.** A Rust toolchain with `cargo`, `just`, and `mdbook`; `git`;
 Docker with its daemon up and the `docker compose` plugin (the Adopt demo runs a
@@ -63,6 +64,12 @@ sound — the Rust apps formatted, lint-clean, and tested; every mdbook builds;
 every corpus validates. This is the per-app truth check and the fastest
 signal.
 
+Ring 1 is also where suite *coherence* is gated: each cross-repo seam is
+pinned by contract tests in the repos that own it (assessments' golden
+export vendored into adroit's ingest tests, conduit's contract constants
+under unit test, tuesday's consumer-side checks), so a seam drifting fails
+the owning repo's gate — not a separate suite-wide script.
+
 The Rust repos also gate dependency advisories with `cargo audit` — a
 `crate-audit` leg in `just ci` (conduit runs it as a dedicated CI job
 instead). A red audit on a cold checkout is not automatically a code
@@ -72,21 +79,19 @@ ignores (what was accepted, why, and the removal trigger), so a new red is
 a decision to make — update the dependency or record the acceptance there —
 never a reason to bypass the gate.
 
-## Ring 2 — does the suite still cohere
+## Ring 2 — this repo's own gate
 
 ```sh
 cd portfolio && just ci
 ```
 
-That runs `scripts/verify-claims` — assertions that pin *this book's* claims
-against every sibling repo's actual reality: the conduit→tuesday contract
-strings against `conduit/src/contract.rs`, every CLI invocation the book quotes
-against the real `--help`, the forge-neutrality claim against the adapters
-conduit actually offers, each maturity badge against its repo's ADR corpus and
-the intro table, and the starter content's counted claims against the kit. A
-red here means the book and a sibling disagree — fix one of them, never the
-gate. This is the single command that answers "do the apps still agree with
-each other." (See [How this book stays true](./truthfulness.md).)
+That builds the book and validates this repo's own ADR corpus
+(`adr-check` seeds it into an ephemeral KB space, resolving adroit by the
+suite convention and skipping with a notice when it can't). The book makes
+no mechanically-verified claims about the siblings anymore — details live
+in each tool's own repo, and the seams are gated where they are owned
+(Ring 1); the retired `verify-claims` gate is recorded as superseded in
+`docs/src/adr/`.
 
 ## Ring 3 — the whole loop, live, end to end
 
@@ -113,7 +118,7 @@ when the remote is unreachable (its HEAD, with a loud local-dev notice, if
 that checkout lacks the exact pin). `demo-up` builds the client corpus from
 llm-wiki's starter content, seeds a **per-run KB space derived from it** —
 the corpus repo on the forge stays the legacy repo of record; adroit and
-conduit operate on the space (conduit ADR-0017, this book's ADR-0009 made
+conduit operate on the space (conduit ADR-0017, portfolio ADR-0009 made
 visible) — resolves the sibling binaries the same way, and seeds the
 throwaway forge; it stops early with named knobs if Docker isn't
 up or llm-wiki doesn't resolve (run `preflight` first).
@@ -139,8 +144,8 @@ kit's narrated page). Deeper conformance is env-gated: `CONDUIT_E2E_GITEA=1`
 
 ## Ring 4 — the knowledge base, harness-first
 
-The harness-first loop (ADR-0010) from the same cold checkout, in two
-legs. The **mechanical leg** is scripted and verifiable with no AI
+The harness-first loop (portfolio ADR-0010) from the same cold checkout,
+in two legs. The **mechanical leg** is scripted and verifiable with no AI
 anywhere — it stands a fully provisioned space up from the kit's starter
 content and ends gate-clean:
 
@@ -150,7 +155,7 @@ export LLM_WIKI_CONFIG="$DIR.registry.toml"   # scope the registry to the run:
                                               # disposable space, disposable registry —
                                               # nothing lands in ~/.llm-wiki
 llm-wiki spaces create "$DIR" --name team --set-default
-adroit seed --from kit/starter/decisions --dir "$DIR"   # 16 decisions, fresh identities
+adroit seed --from kit/starter/decisions --dir "$DIR"   # starter decisions, fresh identities
 cp -r kit/starter/wiki/. "$DIR/wiki/"                   # glossary + guides, typed pages
 llm-wiki ingest . --wiki team                           # strict admission gate
 adroit check --dir "$DIR"                               # semantic gate: clean
