@@ -33,8 +33,10 @@ and never modified — rollback is deleting the new repo.
   engine) are expected once a crate boundary exists to share across.
 - **Como breaks with the llm-wiki-engine upstream entirely** and
   maintains the whole codebase. Attribution is retained (dual
-  MIT/Apache-2.0 license files, upstream copyright, README credit).
-  This replaces ADR-0008's cherry-pick posture.
+  MIT/Apache-2.0 license files, upstream copyright, README credit);
+  every other upstream reference — package identity, schema `$id`
+  namespace, installers, release machinery, inherited community files —
+  is removed. This replaces ADR-0008's cherry-pick posture.
 - **Truth by construction**: path dependencies and a shared contract
   crate replace pins, resolvers, and hand-copied constants.
 - Multi-repo features of the loop tools are exercised via dedicated
